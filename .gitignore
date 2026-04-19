@@ -1,4 +1,6 @@
 node_modules/
+gcs-key.json
+*-key.json
 .next/
 .env
 .env.local

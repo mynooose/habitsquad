@@ -76,6 +76,10 @@ class ApiClient {
     this.setToken(null);
   }
 
+  async uploadImage(dataUrl, prefix = 'uploads') {
+    return this.request('/upload', { method: 'POST', body: { dataUrl, prefix } });
+  }
+
   async updateProfile(data) {
     return this.request('/auth/me', { method: 'PUT', body: data });
   }

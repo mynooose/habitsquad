@@ -11,6 +11,7 @@ RUN npm install --omit=dev --ignore-scripts
 RUN npx prisma generate
 
 COPY src ./src
+COPY gcs-key.json ./gcs-key.json
 
 EXPOSE 3001
 

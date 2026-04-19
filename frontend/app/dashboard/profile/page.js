@@ -152,12 +152,20 @@ export default function ProfilePage() {
             <Camera className="w-6 h-6 mx-auto mb-1 text-muted" />
             <p className="text-sm text-muted">Upload your own photo</p>
             <p className="text-xs text-muted">JPG, PNG — max 2MB</p>
-            <input type="file" accept="image/*" onChange={(e) => {
+            <input type="file" accept="image/*" onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+              if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return; }
               const reader = new FileReader();
-              reader.onloadend = () => { setAvatar(reader.result); setShowAvatars(false); };
+              reader.onloadend = async () => {
+                try {
+                  const { url } = await api.uploadImage(reader.result, 'avatars');
+                  setAvatar(url);
+                  setShowAvatars(false);
+                } catch (err) {
+                  setError(err.message || 'Upload failed');
+                }
+              };
               reader.readAsDataURL(file);
             }} className="hidden" />
           </label>

@@ -274,16 +274,24 @@ function ProofModal({ task, onClose, onSubmit }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result);
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = () => {
+  const [uploadError, setUploadError] = useState('');
+  const handleSubmit = async () => {
     if (!preview) return;
     setUploading(true);
-    onSubmit(preview);
+    setUploadError('');
+    try {
+      const { url } = await api.uploadImage(preview, 'proofs');
+      onSubmit(url);
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed');
+      setUploading(false);
+    }
   };
 
   return (
@@ -293,7 +301,8 @@ function ProofModal({ task, onClose, onSubmit }) {
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
         </div>
-        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-primary font-medium">"{task.title}"</span></p>
+        {uploadError && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{uploadError}</div>}
 
         {preview ? (
           <div className="mb-4">
@@ -304,7 +313,7 @@ function ProofModal({ task, onClose, onSubmit }) {
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
             <p className="text-sm text-muted">Click to upload photo</p>
-            <p className="text-xs text-muted mt-1">JPG, PNG — max 2MB</p>
+            <p className="text-xs text-muted mt-1">JPG, PNG — max 5MB</p>
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
         )}

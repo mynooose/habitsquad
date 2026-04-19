@@ -410,7 +410,7 @@ function ProofModal({ task, onClose, onSubmit }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result);
     reader.readAsDataURL(file);
@@ -439,7 +439,17 @@ function ProofModal({ task, onClose, onSubmit }) {
         )}
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
-          <button onClick={() => { setUploading(true); onSubmit(preview); }} disabled={!preview || uploading}
+          <button onClick={async () => {
+              if (!preview) return;
+              setUploading(true);
+              try {
+                const { url } = await api.uploadImage(preview, 'proofs');
+                onSubmit(url);
+              } catch (err) {
+                alert(err.message || 'Upload failed');
+                setUploading(false);
+              }
+            }} disabled={!preview || uploading}
             className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
           </button>
