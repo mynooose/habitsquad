@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
 import { Target, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -13,26 +11,41 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { checkAuth } = useAuth();
+  const [registered, setRegistered] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const data = await api.request('/auth/register', { method: 'POST', body: { email, password, name } });
-      if (data.token) {
-        api.setToken(data.token);
-        await checkAuth();
-        router.push('/dashboard');
-      }
+      await api.request('/auth/register', { method: 'POST', body: { email, password, name } });
+      setRegistered(true);
     } catch (err) {
       setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
+
+  if (registered) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 rounded-2xl bg-brand-500/20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-8 h-8 text-brand-400" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Check your email</h1>
+          <p className="text-zinc-400 mb-8">
+            We sent a verification link to <span className="text-white font-medium">{email}</span>. Click the link to activate your account.
+          </p>
+          <ResendButton email={email} />
+          <p className="mt-6 text-sm text-zinc-500">
+            Already verified? <Link href="/login" className="text-brand-400 hover:text-brand-300 font-medium">Sign in</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
