@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera } from 'lucide-react';
 import { cn, getScoreColor, getScoreBgColor, getDateKey, isToday, getFrequencyLabel } from '@/lib/utils';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -13,7 +13,8 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(getDateKey(new Date()));
+  const [completing, setCompleting] = useState(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -31,6 +32,25 @@ export default function CalendarPage() {
   }, [year, month]);
 
   useEffect(() => { fetchCalendar(); }, [fetchCalendar]);
+
+  const isTodaySelected = selectedDate === getDateKey(new Date());
+
+  const handleToggle = async (task) => {
+    if (!isTodaySelected) return; // can only toggle today's tasks
+    setCompleting(task.id);
+    try {
+      if (task.completed) {
+        await api.uncompleteTask(task.id);
+      } else {
+        await api.completeTask(task.id);
+      }
+      await fetchCalendar();
+    } catch (error) {
+      console.error('Failed:', error);
+    } finally {
+      setCompleting(null);
+    }
+  };
 
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -134,15 +154,7 @@ export default function CalendarPage() {
                   <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Personal</p>
                   <div className="space-y-1">
                     {groupedTasks.personal.map(t => (
-                      <Link key={t.id} href={`/dashboard/tasks/${t.id}`} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/5 group transition-colors">
-                        {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-600 flex-shrink-0" />}
-                        <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-white')}>{t.title}</p>
-                          <p className="text-xs text-zinc-600">{getFrequencyLabel(t.frequency)}</p>
-                        </div>
-                        <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 flex-shrink-0" />
-                      </Link>
+                      <CalendarTask key={t.id} task={t} canToggle={isTodaySelected} completing={completing} onToggle={handleToggle} />
                     ))}
                   </div>
                 </div>
@@ -158,15 +170,7 @@ export default function CalendarPage() {
                   </Link>
                   <div className="space-y-1">
                     {g.tasks.map(t => (
-                      <Link key={t.id} href={`/dashboard/tasks/${t.id}`} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/5 group transition-colors">
-                        {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-600 flex-shrink-0" />}
-                        <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-white')}>{t.title}</p>
-                          <p className="text-xs text-zinc-600">{getFrequencyLabel(t.frequency)}</p>
-                        </div>
-                        <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 flex-shrink-0" />
-                      </Link>
+                      <CalendarTask key={t.id} task={t} canToggle={isTodaySelected} completing={completing} onToggle={handleToggle} />
                     ))}
                   </div>
                 </div>
@@ -191,6 +195,29 @@ export default function CalendarPage() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CalendarTask({ task, canToggle, completing, onToggle }) {
+  const t = task;
+  return (
+    <div className={cn('flex items-center gap-2.5 p-2.5 rounded-lg transition-colors', t.completed ? 'bg-green-500/5' : 'hover:bg-white/5')}>
+      {canToggle ? (
+        <button onClick={() => onToggle(t)} disabled={completing === t.id} className="flex-shrink-0">
+          {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-zinc-500 hover:text-green-400 transition-colors" />}
+        </button>
+      ) : (
+        <div className="flex-shrink-0">
+          {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-zinc-600" />}
+        </div>
+      )}
+      <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
+      <div className="flex-1 min-w-0">
+        <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-white')}>{t.title}</p>
+        <p className="text-xs text-zinc-600">{getFrequencyLabel(t.frequency)}</p>
+      </div>
+      {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
     </div>
   );
 }
