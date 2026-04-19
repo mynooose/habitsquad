@@ -12,7 +12,7 @@ model User {
   email     String   @unique
   password  String
   name      String
-  avatar    String?  @db.Text
+  avatar    String?  @db.LongText
   dob       DateTime?
   gender    String?
   bio              String?  @db.Text
