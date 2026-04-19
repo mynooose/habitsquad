@@ -93,7 +93,7 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold mb-1">Calendar</h1>
-          <p className="text-zinc-400">Track your habit completion over time</p>
+          <p className="text-muted">Track your habit completion over time</p>
         </div>
         <button onClick={() => { setCurrentDate(new Date()); setSelectedDate(getDateKey(new Date())); }} className="px-4 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm font-medium">Today</button>
       </div>
@@ -107,7 +107,7 @@ export default function CalendarPage() {
           </div>
 
           <div className="grid grid-cols-7 border-b border-[var(--card-border)]">
-            {DAYS.map(d => <div key={d} className="p-3 text-center text-xs font-medium text-zinc-500">{d}</div>)}
+            {DAYS.map(d => <div key={d} className="p-3 text-center text-xs font-medium text-muted">{d}</div>)}
           </div>
 
           {loading ? (
@@ -121,7 +121,7 @@ export default function CalendarPage() {
                 return (
                   <button key={i} onClick={() => day.isCurrentMonth && setSelectedDate(day.dateKey)} disabled={!day.isCurrentMonth}
                     className={cn('aspect-square p-2 border-b border-r border-[var(--card-border)] flex flex-col items-center justify-center gap-1 relative',
-                      day.isCurrentMonth ? 'hover:bg-[var(--card-bg-hover)]' : 'text-zinc-700 cursor-default',
+                      day.isCurrentMonth ? 'hover:bg-[var(--card-bg-hover)]' : 'text-muted cursor-default',
                       day.dateKey === selectedDate && 'bg-brand-500/10 ring-1 ring-brand-500',
                       isTodayDate && 'bg-[var(--card-bg-hover)]')}>
                     <span className={cn('text-sm font-medium', isTodayDate && 'text-brand-400')}>{day.day}</span>
@@ -147,10 +147,10 @@ export default function CalendarPage() {
               <div className={cn('p-4 rounded-xl mb-4', getScoreBgColor(selectedData.score))}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-zinc-400 mb-1">Score</p>
+                    <p className="text-xs text-muted mb-1">Score</p>
                     <p className={cn('text-2xl font-bold', getScoreColor(selectedData.score))}>{selectedData.score}%</p>
                   </div>
-                  <p className="text-sm text-zinc-400">{selectedData.completions}/{selectedData.totalTasks} done</p>
+                  <p className="text-sm text-muted">{selectedData.completions}/{selectedData.totalTasks} done</p>
                 </div>
                 <div className="mt-3 h-1.5 rounded-full bg-black/20 overflow-hidden">
                   <div className="h-full rounded-full bg-white/30 transition-all" style={{ width: `${selectedData.score}%` }} />
@@ -160,7 +160,7 @@ export default function CalendarPage() {
               {/* Personal tasks */}
               {groupedTasks?.personal?.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Personal</p>
+                  <p className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Personal</p>
                   <div className="space-y-1">
                     {groupedTasks.personal.map(t => (
                       <CalendarTask key={t.id} task={t} canToggle={isTodaySelected} completing={completing} onToggle={handleToggle} />
@@ -174,8 +174,8 @@ export default function CalendarPage() {
                 <div key={g.id} className="mb-4">
                   <Link href={`/dashboard/groups/${g.id}`} className="flex items-center gap-2 mb-2 group">
                     <div className="w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: (g.color || '#8b5cf6') + '30', color: g.color || '#8b5cf6' }}>{g.name.charAt(0)}</div>
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider group-hover:text-zinc-300 transition-colors">{g.name}</p>
-                    <ExternalLink className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100" />
+                    <p className="text-xs font-medium text-muted uppercase tracking-wider group-hover:text-zinc-300 transition-colors">{g.name}</p>
+                    <ExternalLink className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100" />
                   </Link>
                   <div className="space-y-1">
                     {g.tasks.map(t => (
@@ -187,11 +187,11 @@ export default function CalendarPage() {
 
               {/* No tasks */}
               {selectedData.totalTasks === 0 && (
-                <p className="text-zinc-500 text-sm text-center py-4">No habits scheduled</p>
+                <p className="text-muted text-sm text-center py-4">No habits scheduled</p>
               )}
             </>
           ) : (
-            <p className="text-zinc-500 text-center py-8">Select a date to see details</p>
+            <p className="text-muted text-center py-8">Select a date to see details</p>
           )}
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function CalendarPage() {
         {[{ color: 'bg-green-500', label: '80%+' }, { color: 'bg-yellow-500', label: '60%+' }, { color: 'bg-orange-500', label: '40%+' }, { color: 'bg-red-500', label: '<40%' }].map(item => (
           <div key={item.label} className="flex items-center gap-2">
             <div className={cn('w-3 h-3 rounded-full', item.color)} />
-            <span className="text-xs text-zinc-500">{item.label}</span>
+            <span className="text-xs text-muted">{item.label}</span>
           </div>
         ))}
       </div>
@@ -213,7 +213,7 @@ export default function CalendarPage() {
               <Camera className="w-5 h-5 text-amber-400" />
               <h2 className="text-lg font-bold">Photo Proof Required</h2>
             </div>
-            <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{proofTask.title}"</span></p>
+            <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{proofTask.title}"</span></p>
             <ProofUpload onSubmit={(url) => handleToggle(proofTask, url)} onCancel={() => setProofTask(null)} />
           </div>
         </div>
@@ -238,13 +238,13 @@ function ProofUpload({ onSubmit, onCancel }) {
       {preview ? (
         <div className="mb-4">
           <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-          <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+          <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
         </div>
       ) : (
         <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
-          <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
-          <p className="text-sm text-zinc-400">Click to upload photo</p>
-          <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+          <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
+          <p className="text-sm text-muted">Click to upload photo</p>
+          <p className="text-xs text-muted mt-1">JPG, PNG — max 2MB</p>
           <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
         </label>
       )}
@@ -265,17 +265,17 @@ function CalendarTask({ task, canToggle, completing, onToggle }) {
     <div className={cn('flex items-center gap-2.5 p-2.5 rounded-lg transition-colors', t.completed ? 'bg-green-500/5' : 'hover:bg-white/5')}>
       {canToggle ? (
         <button onClick={() => onToggle(t)} disabled={completing === t.id} className="flex-shrink-0">
-          {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-zinc-500 hover:text-green-400 transition-colors" />}
+          {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted hover:text-green-400 transition-colors" />}
         </button>
       ) : (
         <div className="flex-shrink-0">
-          {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-zinc-600" />}
+          {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted" />}
         </div>
       )}
       <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-primary')}>{t.title}</p>
-        <p className="text-xs text-zinc-600">{getFrequencyLabel(t.frequency)}</p>
+        <p className={cn('text-sm truncate', t.completed ? 'text-muted line-through' : 'text-primary')}>{t.title}</p>
+        <p className="text-xs text-muted">{getFrequencyLabel(t.frequency)}</p>
       </div>
       {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
     </div>

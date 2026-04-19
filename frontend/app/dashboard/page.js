@@ -78,17 +78,18 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold">{greeting}, {user?.name?.split(' ')[0]}!</h1>
-          <p className="text-sm text-muted">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">{greeting}, {user?.name?.split(' ')[0]}!</h1>
+          <p className="text-sm text-muted mt-0.5">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
-        <Link href="/dashboard/new" className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-sm font-medium">
+        <Link href="/dashboard/new" className="btn-primary px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Habit
         </Link>
       </div>
 
       {/* Hero Score */}
-      <div className="p-6 rounded-[20px] gradient-brand text-white mb-5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNTAiIGN5PSI1MCIgcj0iMTIwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSIxNTAiIHI9IjgwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIi8+PC9zdmc+')] opacity-60" />
+      <div className="p-8 rounded-[28px] gradient-brand text-white mb-5 relative overflow-hidden shadow-pop">
+        <div className="blob w-[300px] h-[300px] bg-white/20 -top-20 -right-20" />
+        <div className="blob w-[200px] h-[200px] bg-pink-300 -bottom-10 -left-10 opacity-40" />
         <div className="relative">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-white/70 uppercase tracking-wider">Today's Score</span>
@@ -115,7 +116,7 @@ export default function DashboardPage() {
       {/* Trends + Streaks */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         {/* Trends */}
-        <div className="p-5 rounded-[20px] stat-blue glass-card-interactive">
+        <div className="p-5 rounded-[24px] soft-card bento-blue">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-white" />
@@ -124,7 +125,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-400">This week</span>
+              <span className="text-sm text-muted">This week</span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">{dashStats?.thisWeek?.avgScore || 0}% avg</span>
                 {dashStats?.weekDelta !== 0 && dashStats?.weekDelta !== undefined && (
@@ -135,18 +136,18 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-400">Last week</span>
+              <span className="text-sm text-muted">Last week</span>
               <span className="text-sm font-bold">{dashStats?.lastWeek?.avgScore || 0}% avg</span>
             </div>
             <div className="flex items-center justify-between border-t border-[var(--card-border)] pt-2">
-              <span className="text-sm text-zinc-400">Personal best</span>
+              <span className="text-sm text-muted">Personal best</span>
               <span className="text-sm font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span>
             </div>
           </div>
         </div>
 
         {/* Streaks */}
-        <div className="p-5 rounded-[20px] stat-orange glass-card-interactive">
+        <div className="p-5 rounded-[24px] soft-card bento-orange">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-9 h-9 rounded-xl gradient-orange flex items-center justify-center">
               <Flame className="w-4 h-4 text-white" />
@@ -158,7 +159,7 @@ export default function DashboardPage() {
             <span className="text-sm text-muted mb-1.5">days</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-400">Longest</span>
+            <span className="text-muted">Longest</span>
             <span className="font-bold">{dashStats?.streak?.longest || 0} days</span>
           </div>
         </div>
@@ -168,7 +169,7 @@ export default function DashboardPage() {
       {user?.totalXp !== undefined && (() => {
         const lvl = getLevel(user.totalXp || 0);
         return (
-          <div className="p-5 rounded-[20px] stat-yellow glass-card-interactive mb-5">
+          <div className="p-5 rounded-[24px] soft-card bento-yellow mb-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-yellow-500/20 flex items-center justify-center">
@@ -194,7 +195,7 @@ export default function DashboardPage() {
 
       {/* Rankings */}
       {rankings?.groups?.length > 0 && (
-        <div className="p-5 rounded-[20px] stat-purple glass-card-interactive mb-5">
+        <div className="p-5 rounded-[24px] soft-card bento-purple mb-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-9 h-9 rounded-xl gradient-accent flex items-center justify-center">
               <Trophy className="w-4 h-4 text-white" />
@@ -204,7 +205,7 @@ export default function DashboardPage() {
           <div className="space-y-2">
             {rankings.groups.map(g => (
               <Link key={g.groupId} href={`/dashboard/groups/${g.groupId}`} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black', g.myRank === 1 ? 'bg-yellow-500/20 text-yellow-400' : g.myRank === 2 ? 'bg-zinc-400/20 text-zinc-400' : g.myRank === 3 ? 'bg-amber-600/20 text-amber-500' : 'bg-[var(--card-bg-hover)] text-muted')}>
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black', g.myRank === 1 ? 'bg-yellow-500/20 text-yellow-400' : g.myRank === 2 ? 'bg-zinc-400/20 text-muted' : g.myRank === 3 ? 'bg-amber-600/20 text-amber-500' : 'bg-[var(--card-bg-hover)] text-muted')}>
                   #{g.myRank}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -218,7 +219,7 @@ export default function DashboardPage() {
                   )}
                   {g.myRank === 1 && <p className="text-xs text-yellow-500">Leading!</p>}
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400" />
+                <ChevronRight className="w-4 h-4 text-muted group-hover:text-muted" />
               </Link>
             ))}
           </div>
@@ -230,7 +231,7 @@ export default function DashboardPage() {
         <div className="text-center py-16 rounded-2xl glass-card">
           <Target className="w-12 h-12 mx-auto mb-4 text-muted" />
           <h3 className="text-lg font-semibold mb-2">No habits yet</h3>
-          <p className="text-zinc-400 mb-6">Create your first habit to start tracking</p>
+          <p className="text-muted mb-6">Create your first habit to start tracking</p>
           <Link href="/dashboard/new" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand font-medium"><Plus className="w-4 h-4" /> Create Habit</Link>
         </div>
       )}
@@ -251,7 +252,7 @@ export default function DashboardPage() {
           <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
-              <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setViewProof(null)} className="text-muted hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
@@ -292,17 +293,17 @@ function ProofModal({ task, onClose, onSubmit }) {
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
         </div>
-        <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
 
         {preview ? (
           <div className="mb-4">
             <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
           </div>
         ) : (
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
-            <p className="text-sm text-zinc-400">Click to upload photo</p>
+            <p className="text-sm text-muted">Click to upload photo</p>
             <p className="text-xs text-muted mt-1">JPG, PNG — max 2MB</p>
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
@@ -342,7 +343,7 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
         )}
         <span className="text-xs text-muted ml-auto">{completedCount}/{tasks.length} &middot; {completedPts}/{totalPts} pts</span>
       </div>
-      <div className="rounded-[20px] glass-card divide-y divide-[var(--card-border)] overflow-hidden">
+      <div className="rounded-[24px] soft-card divide-y divide-[var(--card-border)] overflow-hidden">
         {tasks.map(task => (
           <div key={task.id} className={cn('flex items-center gap-3 px-4 py-3 group transition-colors', task.completedToday ? 'bg-green-500/5' : 'hover:bg-white/[0.02]')}>
             <button onClick={() => onToggle(task)} disabled={completing === task.id} className="flex-shrink-0">

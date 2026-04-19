@@ -89,10 +89,10 @@ export default function ProfilePage() {
   return (
     <div className="p-6 lg:p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
         <div>
           <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-zinc-400 text-sm">Manage your account details</p>
+          <p className="text-muted text-sm">Manage your account details</p>
         </div>
       </div>
 
@@ -114,9 +114,9 @@ export default function ProfilePage() {
           </button>
         </div>
         <p className="text-lg font-semibold">{name}</p>
-        <p className="text-sm text-zinc-500">{user?.email}</p>
+        <p className="text-sm text-muted">{user?.email}</p>
         {memberSince && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-zinc-600">
+          <div className="flex items-center gap-1 mt-1 text-xs text-muted">
             <Clock className="w-3 h-3" /> Member since {memberSince}
           </div>
         )}
@@ -130,13 +130,13 @@ export default function ProfilePage() {
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
                 <div>
                   <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
-                  <p className="text-xs text-zinc-500">{user?.totalXp || 0} XP</p>
+                  <p className="text-xs text-muted">{user?.totalXp || 0} XP</p>
                 </div>
               </div>
               <div className="h-2 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
                 <div className="h-full rounded-full bg-yellow-500 transition-all" style={{ width: `${lvl.progress}%` }} />
               </div>
-              <p className="text-xs text-zinc-600 mt-1">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to next level` : 'Max level!'}</p>
+              <p className="text-xs text-muted mt-1">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to next level` : 'Max level!'}</p>
             </div>
           );
         })()}
@@ -149,9 +149,9 @@ export default function ProfilePage() {
 
           {/* Upload custom photo */}
           <label className="block mb-4 p-4 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
-            <Camera className="w-6 h-6 mx-auto mb-1 text-zinc-500" />
-            <p className="text-sm text-zinc-400">Upload your own photo</p>
-            <p className="text-xs text-zinc-600">JPG, PNG — max 2MB</p>
+            <Camera className="w-6 h-6 mx-auto mb-1 text-muted" />
+            <p className="text-sm text-muted">Upload your own photo</p>
+            <p className="text-xs text-muted">JPG, PNG — max 2MB</p>
             <input type="file" accept="image/*" onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -163,7 +163,7 @@ export default function ProfilePage() {
           </label>
 
           {/* Preset avatars */}
-          <p className="text-xs text-zinc-500 mb-2">Or pick a preset</p>
+          <p className="text-xs text-muted mb-2">Or pick a preset</p>
           <div className="grid grid-cols-6 gap-3">
             {AVATARS.map((url, i) => (
               <button key={i} onClick={() => { setAvatar(url); setShowAvatars(false); }}
@@ -173,7 +173,7 @@ export default function ProfilePage() {
               </button>
             ))}
             <button onClick={() => { setAvatar(''); setShowAvatars(false); }}
-              className={cn('w-full aspect-square rounded-xl border-2 flex items-center justify-center bg-[var(--card-bg-hover)] text-zinc-500 hover:scale-105 transition-all',
+              className={cn('w-full aspect-square rounded-xl border-2 flex items-center justify-center bg-[var(--card-bg-hover)] text-muted hover:scale-105 transition-all',
                 !avatar ? 'border-brand-500' : 'border-transparent')}>
               <User className="w-6 h-6" />
             </button>
@@ -191,11 +191,11 @@ export default function ProfilePage() {
 
         <div>
           <label className="block text-sm font-medium mb-2">Email</label>
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl glass-card text-zinc-500">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl glass-card text-muted">
             <Mail className="w-4 h-4" />
             {user?.email}
           </div>
-          <p className="text-xs text-zinc-600 mt-1">Email cannot be changed</p>
+          <p className="text-xs text-muted mt-1">Email cannot be changed</p>
         </div>
 
         <div>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
             {GENDERS.map(g => (
               <button key={g} type="button" onClick={() => setGender(gender === g ? '' : g)}
                 className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  gender === g ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
+                  gender === g ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
                 {g}
               </button>
             ))}
@@ -221,7 +221,7 @@ export default function ProfilePage() {
           <label className="block text-sm font-medium mb-2">Bio</label>
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={3} maxLength={200}
             className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 resize-none" />
-          <p className="text-xs text-zinc-600 mt-1">{bio.length}/200</p>
+          <p className="text-xs text-muted mt-1">{bio.length}/200</p>
         </div>
 
         {/* Daily Email Notification */}
@@ -230,7 +230,7 @@ export default function ProfilePage() {
             <p className="font-medium flex items-center gap-2">
               <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
             </p>
-            <p className="text-sm text-zinc-500">Get your planned tasks emailed every day at 7:00 AM</p>
+            <p className="text-sm text-muted">Get your planned tasks emailed every day at 7:00 AM</p>
           </div>
           <button type="button" onClick={() => setDailyEmail(!dailyEmail)}
             className={cn('w-12 h-7 rounded-full transition-colors relative', dailyEmail ? 'bg-brand-500' : 'bg-[var(--card-bg-hover)]')}>

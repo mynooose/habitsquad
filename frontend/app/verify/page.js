@@ -60,7 +60,7 @@ function VerifyContent() {
           <>
             <Loader2 className="w-12 h-12 animate-spin text-brand-500 mx-auto mb-4" />
             <h1 className="text-xl font-bold mb-2">Verifying your email...</h1>
-            <p className="text-zinc-400">Just a moment</p>
+            <p className="text-muted">Just a moment</p>
           </>
         )}
 
@@ -70,7 +70,7 @@ function VerifyContent() {
               <CheckCircle2 className="w-8 h-8 text-green-400" />
             </div>
             <h1 className="text-xl font-bold mb-2">Email verified!</h1>
-            <p className="text-zinc-400 mb-6">Redirecting to dashboard...</p>
+            <p className="text-muted mb-6">Redirecting to dashboard...</p>
           </>
         )}
 
@@ -80,7 +80,7 @@ function VerifyContent() {
               <XCircle className="w-8 h-8 text-red-400" />
             </div>
             <h1 className="text-xl font-bold mb-2">Verification failed</h1>
-            <p className="text-zinc-400 mb-6">{error}</p>
+            <p className="text-muted mb-6">{error}</p>
             <Link href="/login" className="inline-block px-6 py-3 rounded-xl gradient-brand font-semibold hover:opacity-90">
               Go to Login
             </Link>

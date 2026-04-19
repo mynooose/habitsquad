@@ -98,12 +98,12 @@ export default function EditTaskPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Edit Habit</h1>
-          <p className="text-zinc-400 text-sm">Update habit settings</p>
+          <p className="text-muted text-sm">Update habit settings</p>
         </div>
-        <button onClick={() => setShowDelete(true)} className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-400 hover:text-red-400"><Trash2 className="w-5 h-5" /></button>
+        <button onClick={() => setShowDelete(true)} className="p-2 rounded-lg hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="w-5 h-5" /></button>
       </div>
 
       {error && <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
@@ -125,13 +125,13 @@ export default function EditTaskPage() {
         <div className="p-4 rounded-xl glass-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Weight Budget</span>
-            <span className="text-sm text-zinc-400">{budget.used - originalWeight + weightage} / 100 pts</span>
+            <span className="text-sm text-muted">{budget.used - originalWeight + weightage} / 100 pts</span>
           </div>
           <div className="h-3 rounded-full bg-[var(--card-bg-hover)] overflow-hidden flex">
             <div className="h-full bg-brand-500/60 transition-all" style={{ width: `${budget.used - originalWeight}%` }} />
             <div className="h-full bg-brand-500 transition-all" style={{ width: `${weightage}%` }} />
           </div>
-          <div className="flex justify-between mt-1.5 text-xs text-zinc-500">
+          <div className="flex justify-between mt-1.5 text-xs text-muted">
             <span>{budget.used - originalWeight}pts other tasks</span>
             <span>{availableBudget - weightage}pts left</span>
           </div>
@@ -140,7 +140,7 @@ export default function EditTaskPage() {
         <div className="flex items-center justify-between p-4 rounded-xl glass-card">
           <div>
             <p className="font-medium">Active</p>
-            <p className="text-sm text-zinc-500">Inactive habits won't appear in daily tracking</p>
+            <p className="text-sm text-muted">Inactive habits won't appear in daily tracking</p>
           </div>
           <button type="button" onClick={() => setIsActive(!isActive)}
             className={cn('w-12 h-7 rounded-full transition-colors relative', isActive ? 'bg-brand-500' : 'bg-[var(--card-bg-hover)]')}>
@@ -151,7 +151,7 @@ export default function EditTaskPage() {
         <div className="flex items-center justify-between p-4 rounded-xl glass-card">
           <div>
             <p className="font-medium flex items-center gap-2"><Camera className="w-4 h-4 text-amber-400" /> Requires Photo Proof</p>
-            <p className="text-sm text-zinc-500">Users must upload a photo when completing</p>
+            <p className="text-sm text-muted">Users must upload a photo when completing</p>
           </div>
           <button type="button" onClick={() => setRequiresProof(!requiresProof)}
             className={cn('w-12 h-7 rounded-full transition-colors relative', requiresProof ? 'bg-amber-500' : 'bg-[var(--card-bg-hover)]')}>
@@ -163,12 +163,12 @@ export default function EditTaskPage() {
           <label className="block text-sm font-medium mb-2">Group</label>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setGroupId(null)}
-              className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === null ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
+              className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === null ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
               Personal
             </button>
             {groups.map(g => (
               <button key={g.id} type="button" onClick={() => setGroupId(g.id)}
-                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}
+                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-muted hover:text-white')}
                 style={groupId === g.id ? { backgroundColor: (g.color || '#8b5cf6') + '20', color: g.color } : {}}>
                 {g.name}
               </button>
@@ -187,7 +187,7 @@ export default function EditTaskPage() {
           <div className="flex flex-wrap gap-2">
             {FREQUENCIES.map(f => (
               <button key={f.value} type="button" onClick={() => setFrequency(f.value)}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
+                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
                 {f.label}
               </button>
             ))}
@@ -197,7 +197,7 @@ export default function EditTaskPage() {
         <div>
           <label className="block text-sm font-medium mb-3">Weight: {weightage} pts</label>
           <input type="range" min="1" max={Math.max(1, availableBudget)} value={Math.min(weightage, availableBudget)} onChange={(e) => setWeightage(+e.target.value)} className="w-full accent-brand-500" />
-          <div className="flex justify-between text-xs text-zinc-500 mt-1"><span>1 pt</span><span>{availableBudget} pts max</span></div>
+          <div className="flex justify-between text-xs text-muted mt-1"><span>1 pt</span><span>{availableBudget} pts max</span></div>
         </div>
 
         <div>

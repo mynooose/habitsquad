@@ -35,11 +35,11 @@ export default function RegisterPage() {
             <CheckCircle2 className="w-8 h-8 text-brand-400" />
           </div>
           <h1 className="text-3xl font-bold mb-2">Check your email</h1>
-          <p className="text-zinc-400 mb-8">
+          <p className="text-muted mb-8">
             We sent a verification link to <span className="text-white font-medium">{email}</span>. Click the link to activate your account.
           </p>
           <ResendButton email={email} />
-          <p className="mt-6 text-sm text-zinc-500">
+          <p className="mt-6 text-sm text-muted">
             Already verified? <Link href="/login" className="text-brand-400 hover:text-brand-300 font-medium">Sign in</Link>
           </p>
         </div>
@@ -55,7 +55,7 @@ export default function RegisterPage() {
             <Target className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold mb-4">Start Your Journey</h2>
-          <p className="text-zinc-400 mb-8">Build habits with accountability partners.</p>
+          <p className="text-muted mb-8">Build habits with accountability partners.</p>
           <div className="space-y-3 text-left">
             {['Track habits with weighted scoring', 'Create accountability groups', 'Compete on leaderboards', 'Visualize with calendar heatmaps'].map((f, i) => (
               <div key={i} className="flex items-center gap-3 text-sm text-zinc-300">
@@ -78,7 +78,7 @@ export default function RegisterPage() {
           </Link>
 
           <h1 className="text-3xl font-bold mb-2">Create account</h1>
-          <p className="text-zinc-400 mb-8">Start tracking in under a minute</p>
+          <p className="text-muted mb-8">Start tracking in under a minute</p>
 
           {error && (
             <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
@@ -88,7 +88,7 @@ export default function RegisterPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Name</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
@@ -96,7 +96,7 @@ export default function RegisterPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
@@ -104,11 +104,11 @@ export default function RegisterPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
-              <p className="mt-2 text-xs text-zinc-500">At least 6 characters</p>
+              <p className="mt-2 text-xs text-muted">At least 6 characters</p>
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-3 rounded-xl gradient-brand font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
@@ -116,7 +116,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-zinc-400">
+          <p className="mt-8 text-center text-muted">
             Already have an account? <Link href="/login" className="text-brand-400 hover:text-brand-300 font-medium">Sign in</Link>
           </p>
         </div>
@@ -144,7 +144,7 @@ function ResendButton({ email }) {
 
   return (
     <button onClick={handleResend} disabled={sending || sent}
-      className="w-full py-3 rounded-xl bg-[var(--card-bg)] text-zinc-400 font-medium hover:bg-[var(--card-bg-hover)] disabled:opacity-50">
+      className="w-full py-3 rounded-xl bg-[var(--card-bg)] text-muted font-medium hover:bg-[var(--card-bg-hover)] disabled:opacity-50">
       {sending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : sent ? 'Email sent!' : "Didn't get it? Resend"}
     </button>
   );

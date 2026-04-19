@@ -136,14 +136,14 @@ export default function GroupDetailPage() {
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">{group.name}</h1>
             {role === 'ADMIN' && <Crown className="w-5 h-5 text-yellow-500" />}
           </div>
-          {group.description && <p className="text-zinc-400 text-sm">{group.description}</p>}
+          {group.description && <p className="text-muted text-sm">{group.description}</p>}
         </div>
         <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg gradient-brand font-medium hover:opacity-90">
           <UserPlus className="w-4 h-4" /> Invite
@@ -153,7 +153,7 @@ export default function GroupDetailPage() {
       {/* Invite Code */}
       <div className="p-4 rounded-xl glass-card flex items-center gap-4 mb-6">
         <div className="flex-1">
-          <p className="text-xs text-zinc-500 mb-1">Invite Code</p>
+          <p className="text-xs text-muted mb-1">Invite Code</p>
           <code className="text-lg font-mono">{group.inviteCode}</code>
         </div>
         <button onClick={copyCode} className="px-4 py-2 rounded-lg bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg-hover)] flex items-center gap-2 text-sm">
@@ -166,7 +166,7 @@ export default function GroupDetailPage() {
       <div className="flex gap-2 mb-6">
         {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-[var(--card-bg)]')}>
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-white/10 text-white' : 'text-muted hover:text-white hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -184,8 +184,8 @@ export default function GroupDetailPage() {
 
           {memberTasks.length === 0 ? (
             <div className="text-center py-12 rounded-xl glass-card">
-              <Target className="w-8 h-8 mx-auto mb-3 text-zinc-600" />
-              <p className="text-zinc-400">No members with tasks yet</p>
+              <Target className="w-8 h-8 mx-auto mb-3 text-muted" />
+              <p className="text-muted">No members with tasks yet</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -213,11 +213,11 @@ export default function GroupDetailPage() {
                       </div>
                       <div className="flex-1 text-left">
                         <p className="font-medium flex items-center gap-1.5">
-                          {member.user.name} {isMe && <span className="text-zinc-500">(You)</span>}
+                          {member.user.name} {isMe && <span className="text-muted">(You)</span>}
                           {member.role === 'ADMIN' && <span className="ml-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">Admin</span>}
                           <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-white/5')}>Lv.{lvl.level}</span>
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted">
                           {noActivity ? <span className="text-red-400 font-medium">No activity today</span> :
                             <>{member.completedCount}/{member.totalCount} completed</>}
                           {' '}&middot; {member.totalXp || 0} XP
@@ -225,7 +225,7 @@ export default function GroupDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <div className={cn('text-xl font-bold', isPerfect ? 'text-green-400' : isShamed ? 'text-red-400' : mColor.accent)}>{member.score}%</div>
-                        {isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
+                        {isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />}
                       </div>
                     </button>
 
@@ -244,17 +244,17 @@ export default function GroupDetailPage() {
                               {/* If it's my task, make it toggleable */}
                               {isMe ? (
                                 <button onClick={() => handleToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
-                                  {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-zinc-500 hover:text-green-400 transition-colors" />}
+                                  {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
                                 </button>
                               ) : (
                                 <div className="flex-shrink-0">
-                                  {task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-zinc-600" />}
+                                  {task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-muted" />}
                                 </div>
                               )}
                               <div className="w-1 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
                               <div className="flex-1 min-w-0">
-                                <p className={cn('text-sm font-medium', task.completedToday && 'text-zinc-400 line-through')}>{task.title}</p>
-                                <p className="text-xs text-zinc-600">
+                                <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
+                                <p className="text-xs text-muted">
                                   {getFrequencyLabel(task.frequency)}
                                   {task.group && <span> &middot; {task.group.name}</span>}
                                 </p>
@@ -266,8 +266,8 @@ export default function GroupDetailPage() {
                                   <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
                                 </button>
                               )}
-                              <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-zinc-400">{task.weightage}pts</div>
-                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-zinc-600 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
+                              <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-muted">{task.weightage}pts</div>
+                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>
                           ))}
                         </div>
@@ -276,7 +276,7 @@ export default function GroupDetailPage() {
 
                     {/* No tasks state */}
                     {isExpanded && member.tasks.length === 0 && (
-                      <div className="border-t border-[var(--card-border)] p-4 text-center text-sm text-zinc-500">
+                      <div className="border-t border-[var(--card-border)] p-4 text-center text-sm text-muted">
                         No active habits yet
                       </div>
                     )}
@@ -295,7 +295,7 @@ export default function GroupDetailPage() {
             <h2 className="font-semibold">Leaderboard</h2>
             <div className="flex gap-2">
               {['week', 'month'].map(p => (
-                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
+                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
                   {p === 'week' ? 'This Week' : 'This Month'}
                 </button>
               ))}
@@ -306,15 +306,15 @@ export default function GroupDetailPage() {
               const isMe = entry.user.id === user?.id;
               return (
                 <div key={entry.user.id} className={cn('flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0', isMe && 'bg-green-500/5')}>
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center font-bold', i === 0 ? 'bg-yellow-500/20 text-yellow-500' : i === 1 ? 'bg-zinc-500/20 text-zinc-400' : i === 2 ? 'bg-amber-600/20 text-amber-600' : 'bg-[var(--card-bg-hover)] text-zinc-500')}>
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center font-bold', i === 0 ? 'bg-yellow-500/20 text-yellow-500' : i === 1 ? 'bg-zinc-500/20 text-muted' : i === 2 ? 'bg-amber-600/20 text-amber-600' : 'bg-[var(--card-bg-hover)] text-muted')}>
                     {entry.rank}
                   </div>
                   <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(entry.user.name)}</div>
                   <div className="flex-1">
-                    <p className="font-medium">{entry.user.name} {isMe && <span className="text-zinc-500">(You)</span>}</p>
-                    <p className="text-xs text-zinc-500">{entry.completions} completions</p>
+                    <p className="font-medium">{entry.user.name} {isMe && <span className="text-muted">(You)</span>}</p>
+                    <p className="text-xs text-muted">{entry.completions} completions</p>
                   </div>
-                  <div className={cn('text-2xl font-bold', i === 0 ? 'text-yellow-500' : i === 1 ? 'text-zinc-400' : i === 2 ? 'text-amber-600' : 'text-primary')}>{entry.score}%</div>
+                  <div className={cn('text-2xl font-bold', i === 0 ? 'text-yellow-500' : i === 1 ? 'text-muted' : i === 2 ? 'text-amber-600' : 'text-primary')}>{entry.score}%</div>
                 </div>
               );
             })}
@@ -330,8 +330,8 @@ export default function GroupDetailPage() {
               <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
                 <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
                 <div className="flex-1">
-                  <p className="font-medium">{m.user.name} {m.user.id === user?.id && <span className="text-zinc-500">(You)</span>}</p>
-                  <p className="text-xs text-zinc-500">{m.user.email}</p>
+                  <p className="font-medium">{m.user.name} {m.user.id === user?.id && <span className="text-muted">(You)</span>}</p>
+                  <p className="text-xs text-muted">{m.user.email}</p>
                 </div>
                 {m.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full">Admin</span>}
                 {m.user.id !== user?.id && role === 'ADMIN' && (
@@ -343,17 +343,17 @@ export default function GroupDetailPage() {
 
           {group.invites?.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-zinc-400 mb-2">Pending Invites</h3>
+              <h3 className="text-sm font-medium text-muted mb-2">Pending Invites</h3>
               <div className="rounded-xl glass-card overflow-hidden">
                 {group.invites.map(inv => (
                   <div key={inv.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
-                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center"><Mail className="w-4 h-4 text-zinc-500" /></div>
+                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center"><Mail className="w-4 h-4 text-muted" /></div>
                     <div className="flex-1">
                       <p className="font-medium">{inv.email}</p>
-                      <p className="text-xs text-zinc-500">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">Pending</span>
-                    {role === 'ADMIN' && <button onClick={() => handleCancelInvite(inv.id)} className="text-xs text-zinc-400 hover:text-white">Cancel</button>}
+                    {role === 'ADMIN' && <button onClick={() => handleCancelInvite(inv.id)} className="text-xs text-muted hover:text-white">Cancel</button>}
                   </div>
                 ))}
               </div>
@@ -393,7 +393,7 @@ export default function GroupDetailPage() {
           <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
-              <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setViewProof(null)} className="text-muted hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
@@ -423,17 +423,17 @@ function ProofModal({ task, onClose, onSubmit }) {
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
         </div>
-        <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
         {preview ? (
           <div className="mb-4">
             <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
           </div>
         ) : (
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
-            <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
-            <p className="text-sm text-zinc-400">Click to upload photo</p>
-            <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+            <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
+            <p className="text-sm text-muted">Click to upload photo</p>
+            <p className="text-xs text-muted mt-1">JPG, PNG — max 2MB</p>
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
         )}
@@ -507,10 +507,10 @@ function InviteModal({ group, onClose, onInvited }) {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
         <div className="flex gap-2 mb-4">
-          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-[var(--card-bg-hover)]' : 'text-zinc-400 hover:text-white')}>
+          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-white')}>
             <Users className="w-4 h-4 inline mr-2" />Search Users
           </button>
-          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-[var(--card-bg-hover)]' : 'text-zinc-400 hover:text-white')}>
+          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-white')}>
             <Mail className="w-4 h-4 inline mr-2" />Email Invite
           </button>
         </div>
@@ -518,12 +518,12 @@ function InviteModal({ group, onClose, onInvited }) {
         {tab === 'search' && (
           <>
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..."
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
             </div>
             <div className="max-h-64 overflow-y-auto space-y-2">
-              {users.length === 0 && search.length >= 2 && <p className="text-center text-zinc-500 py-4">No users found</p>}
+              {users.length === 0 && search.length >= 2 && <p className="text-center text-muted py-4">No users found</p>}
               {users.map(u => {
                 const isInvited = invited.includes(u.id);
                 return (
@@ -531,7 +531,7 @@ function InviteModal({ group, onClose, onInvited }) {
                     <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(u.name)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{u.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">{u.email}</p>
+                      <p className="text-xs text-muted truncate">{u.email}</p>
                     </div>
                     <button onClick={() => handleInviteUser(u.id)} disabled={isInvited || loading}
                       className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', isInvited ? 'bg-green-500/20 text-green-400' : 'bg-brand-500 text-white hover:bg-brand-600')}>
@@ -546,7 +546,7 @@ function InviteModal({ group, onClose, onInvited }) {
 
         {tab === 'email' && (
           <form onSubmit={handleInviteEmail} className="space-y-4">
-            <p className="text-sm text-zinc-400">Invite someone who isn't on HabitSquad yet.</p>
+            <p className="text-sm text-muted">Invite someone who isn't on HabitSquad yet.</p>
             <div className="flex gap-2">
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="friend@example.com"
                 className="flex-1 px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />

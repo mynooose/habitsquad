@@ -63,7 +63,7 @@ export default function LoginPage() {
           </Link>
 
           <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-          <p className="text-zinc-400 mb-8">Sign in to continue tracking</p>
+          <p className="text-muted mb-8">Sign in to continue tracking</p>
 
           {error && (
             <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -81,7 +81,7 @@ export default function LoginPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
@@ -100,7 +100,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-zinc-400">
+          <p className="mt-8 text-center text-muted">
             Don't have an account? <Link href="/register" className="text-brand-400 hover:text-brand-300 font-medium">Create one</Link>
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function LoginPage() {
             <Target className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold mb-4">Track. Compete. Grow.</h2>
-          <p className="text-zinc-400">Join your squad and build habits that stick.</p>
+          <p className="text-muted">Join your squad and build habits that stick.</p>
         </div>
       </div>
     </div>

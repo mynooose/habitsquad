@@ -54,7 +54,7 @@ export default function GroupsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold mb-1">Groups</h1>
-          <p className="text-zinc-400">Compete and stay accountable with your squad</p>
+          <p className="text-muted">Compete and stay accountable with your squad</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowJoin(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm font-medium">
@@ -91,9 +91,9 @@ export default function GroupsPage() {
 
       {groups.length === 0 ? (
         <div className="text-center py-16 rounded-2xl glass-card">
-          <Users className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
+          <Users className="w-12 h-12 mx-auto mb-4 text-muted" />
           <h3 className="text-lg font-semibold mb-2">No groups yet</h3>
-          <p className="text-zinc-400 mb-6">Create or join a group to compete with friends</p>
+          <p className="text-muted mb-6">Create or join a group to compete with friends</p>
           <div className="flex justify-center gap-3">
             <button onClick={() => setShowJoin(true)} className="px-6 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Join Group</button>
             <Link href="/dashboard/new" className="px-6 py-3 rounded-xl gradient-brand font-medium">Create Group</Link>
@@ -113,9 +113,9 @@ export default function GroupsPage() {
                   <h3 className="font-semibold">{group.name}</h3>
                   {group.role === 'ADMIN' && <Crown className="w-4 h-4 text-yellow-500" />}
                 </div>
-                <p className="text-sm text-zinc-500">{group.memberCount} members • {group.taskCount || 0} habits</p>
+                <p className="text-sm text-muted">{group.memberCount} members • {group.taskCount || 0} habits</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-500" />
+              <ChevronRight className="w-5 h-5 text-muted" />
             </Link>
           ))}
         </div>
