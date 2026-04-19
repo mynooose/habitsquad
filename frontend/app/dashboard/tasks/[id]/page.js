@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Loader2, Check, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Trash2, Camera } from 'lucide-react';
 import { cn, TASK_COLORS, FREQUENCIES } from '@/lib/utils';
 
 export default function EditTaskPage() {
@@ -27,6 +27,7 @@ export default function EditTaskPage() {
   const [color, setColor] = useState(TASK_COLORS[0]);
   const [groupId, setGroupId] = useState(null);
   const [isActive, setIsActive] = useState(true);
+  const [requiresProof, setRequiresProof] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +43,7 @@ export default function EditTaskPage() {
         setColor(task.color || TASK_COLORS[0]);
         setGroupId(task.groupId);
         setIsActive(task.isActive);
+        setRequiresProof(task.requiresProof || false);
         setGroups(g || []);
         const budgetRes = await api.getTaskBudget(task.groupId);
         setBudget(budgetRes);
@@ -69,7 +71,7 @@ export default function EditTaskPage() {
     setSaving(true);
     setError('');
     try {
-      await api.updateTask(taskId, { title, frequency, weightage, color, groupId, isActive });
+      await api.updateTask(taskId, { title, frequency, weightage, color, groupId, isActive, requiresProof });
       router.push('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -143,6 +145,17 @@ export default function EditTaskPage() {
           <button type="button" onClick={() => setIsActive(!isActive)}
             className={cn('w-12 h-7 rounded-full transition-colors relative', isActive ? 'bg-brand-500' : 'bg-surface-300')}>
             <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', isActive ? 'translate-x-6' : 'translate-x-1')} />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-100 border border-white/5">
+          <div>
+            <p className="font-medium flex items-center gap-2"><Camera className="w-4 h-4 text-amber-400" /> Requires Photo Proof</p>
+            <p className="text-sm text-zinc-500">Users must upload a photo when completing</p>
+          </div>
+          <button type="button" onClick={() => setRequiresProof(!requiresProof)}
+            className={cn('w-12 h-7 rounded-full transition-colors relative', requiresProof ? 'bg-amber-500' : 'bg-surface-300')}>
+            <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', requiresProof ? 'translate-x-6' : 'translate-x-1')} />
           </button>
         </div>
 

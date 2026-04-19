@@ -102,8 +102,8 @@ class ApiClient {
     return this.request(`/tasks/${id}`, { method: 'DELETE' });
   }
 
-  async completeTask(id, date = null) {
-    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date } });
+  async completeTask(id, date = null, proofUrl = null) {
+    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date, proofUrl } });
   }
 
   async uncompleteTask(id, date = null) {

@@ -5,8 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
-import { Target, LayoutDashboard, Calendar, Users, Settings, LogOut, Plus, ChevronRight, Flame } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Target, LayoutDashboard, Calendar, Users, Settings, LogOut, Plus, ChevronRight, Flame, Zap } from 'lucide-react';
+import { cn, getLevel } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -63,7 +63,10 @@ export default function DashboardLayout({ children }) {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
+              <p className="text-xs text-zinc-500 truncate flex items-center gap-1">
+                <Zap className="w-3 h-3 text-yellow-400" />
+                <span className={getLevel(user?.totalXp || 0).color}>Lv.{getLevel(user?.totalXp || 0).level} {getLevel(user?.totalXp || 0).name}</span>
+              </p>
             </div>
           </Link>
         </div>

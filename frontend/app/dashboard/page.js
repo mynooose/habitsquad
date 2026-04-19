@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, TrendingUp, TrendingDown, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus } from 'lucide-react';
-import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS } from '@/lib/utils';
+import { Plus, CheckCircle2, Circle, Flame, Target, TrendingUp, TrendingDown, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera } from 'lucide-react';
+import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS, getLevel } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [rankings, setRankings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(null);
+  const [proofTask, setProofTask] = useState(null); // task requiring photo proof
 
   const fetchData = useCallback(async () => {
     try {
@@ -37,19 +38,24 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleToggle = async (task) => {
+  const handleToggle = async (task, proofUrl = null) => {
+    if (!task.completedToday && task.requiresProof && !proofUrl) {
+      setProofTask(task);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completedToday) {
         await api.uncompleteTask(task.id);
       } else {
-        await api.completeTask(task.id);
+        await api.completeTask(task.id, null, proofUrl);
       }
       await fetchData();
     } catch (error) {
       console.error('Failed:', error);
     } finally {
       setCompleting(null);
+      setProofTask(null);
     }
   };
 
@@ -155,6 +161,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Level & XP */}
+      {user?.totalXp !== undefined && (() => {
+        const lvl = getLevel(user.totalXp || 0);
+        return (
+          <div className="p-4 rounded-xl bg-surface-100 border border-white/5 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Level</span>
+              </div>
+              <span className="text-xs text-zinc-500">{user.totalXp || 0} XP total</span>
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
+              <div className="flex-1">
+                <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
+                <p className="text-xs text-zinc-500">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to Level ${lvl.level + 1}` : 'Max level reached!'}</p>
+              </div>
+            </div>
+            <div className="h-2 rounded-full bg-surface-200 overflow-hidden">
+              <div className="h-full rounded-full bg-yellow-500 transition-all duration-500" style={{ width: `${lvl.progress}%` }} />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Rankings */}
       {rankings?.groups?.length > 0 && (
         <div className="p-4 rounded-xl bg-surface-100 border border-white/5 mb-6">
@@ -205,6 +237,65 @@ export default function DashboardPage() {
       {groupedTasks.map(({ group, tasks: gTasks }) => (
         <TaskSection key={group.id} title={group.name} groupId={group.id} color={group.color} tasks={gTasks} completing={completing} onToggle={handleToggle} />
       ))}
+
+      {/* Photo Proof Modal */}
+      {proofTask && (
+        <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />
+      )}
+    </div>
+  );
+}
+
+function ProofModal({ task, onClose, onSubmit }) {
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = () => {
+    if (!preview) return;
+    setUploading(true);
+    onSubmit(preview);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <Camera className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-bold">Photo Proof Required</h2>
+        </div>
+        <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+
+        {preview ? (
+          <div className="mb-4">
+            <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+          </div>
+        ) : (
+          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+            <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+            <p className="text-sm text-zinc-400">Click to upload photo</p>
+            <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+            <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+          </label>
+        )}
+
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+          <button onClick={handleSubmit} disabled={!preview || uploading}
+            className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -242,6 +333,7 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle }) {
               <p className={cn('text-sm font-medium', task.completedToday && 'text-zinc-500 line-through')}>{task.title}</p>
               <p className="text-xs text-zinc-600">{getFrequencyLabel(task.frequency)}</p>
             </div>
+            {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
             <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
             <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-surface-200 text-zinc-500')}>{task.weightage}pts</div>
           </div>

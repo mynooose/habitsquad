@@ -123,12 +123,15 @@ async function getMemberTasks(req, res, next) {
       });
       const tasksWithStatus = tasks.map(t => ({
         id: t.id, title: t.title, frequency: t.frequency, weightage: t.weightage, color: t.color,
-        groupId: t.groupId, group: t.group, completedToday: t.completions.length > 0
+        requiresProof: t.requiresProof, groupId: t.groupId, group: t.group,
+        completedToday: t.completions.length > 0,
+        proofUrl: t.completions[0]?.proofUrl || null
       }));
       const totalWeight = tasksWithStatus.reduce((sum, t) => sum + t.weightage, 0);
       const completedWeight = tasksWithStatus.filter(t => t.completedToday).reduce((sum, t) => sum + t.weightage, 0);
       const score = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
-      return { user: m.user, role: m.role, tasks: tasksWithStatus, score, completedCount: tasksWithStatus.filter(t => t.completedToday).length, totalCount: tasksWithStatus.length };
+      const userXp = await prisma.user.findUnique({ where: { id: m.userId }, select: { totalXp: true } });
+      return { user: m.user, role: m.role, tasks: tasksWithStatus, score, completedCount: tasksWithStatus.filter(t => t.completedToday).length, totalCount: tasksWithStatus.length, totalXp: userXp?.totalXp || 0 };
     }));
     memberTasks.sort((a, b) => b.score - a.score);
     res.json({ memberTasks });

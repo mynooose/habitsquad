@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap } from 'lucide-react';
+import { getLevel } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
@@ -119,6 +120,26 @@ export default function ProfilePage() {
             <Clock className="w-3 h-3" /> Member since {memberSince}
           </div>
         )}
+
+        {/* Level & XP */}
+        {(() => {
+          const lvl = getLevel(user?.totalXp || 0);
+          return (
+            <div className="mt-4 p-4 rounded-xl bg-surface-100 border border-white/5 w-full max-w-xs">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
+                <div>
+                  <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
+                  <p className="text-xs text-zinc-500">{user?.totalXp || 0} XP</p>
+                </div>
+              </div>
+              <div className="h-2 rounded-full bg-surface-200 overflow-hidden">
+                <div className="h-full rounded-full bg-yellow-500 transition-all" style={{ width: `${lvl.progress}%` }} />
+              </div>
+              <p className="text-xs text-zinc-600 mt-1">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to next level` : 'Max level!'}</p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Avatar picker */}

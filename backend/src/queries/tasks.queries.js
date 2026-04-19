@@ -55,8 +55,8 @@ async function findActiveTasksByUserAndGroup(userId, groupId) {
   return prisma.task.findMany({ where: { userId, groupId, isActive: true } });
 }
 
-async function createCompletion({ taskId, userId, date, notes }) {
-  return prisma.taskCompletion.create({ data: { taskId, userId, date, notes } });
+async function createCompletion({ taskId, userId, date, notes, proofUrl }) {
+  return prisma.taskCompletion.create({ data: { taskId, userId, date, notes, proofUrl } });
 }
 
 async function findCompletion(taskId, date) {

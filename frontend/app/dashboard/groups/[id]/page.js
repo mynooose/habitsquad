@@ -5,8 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight } from 'lucide-react';
-import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials } from '@/lib/utils';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull } from 'lucide-react';
+import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
   { bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', accent: 'text-indigo-400', avatarBg: 'bg-indigo-500/25' },
@@ -186,25 +186,38 @@ export default function GroupDetailPage() {
                 const isMe = member.user.id === user?.id;
                 const isExpanded = expandedMembers[member.user.id] !== false;
                 const mColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
+                const isShamed = member.totalCount > 0 && member.score < 50;
+                const isPerfect = member.totalCount > 0 && member.score === 100;
+                const noActivity = member.totalCount > 0 && member.completedCount === 0;
+                const lvl = getLevel(member.totalXp || 0);
 
                 return (
-                  <div key={member.user.id} className={cn('rounded-xl border overflow-hidden', mColor.bg, mColor.border)}>
+                  <div key={member.user.id} className={cn('rounded-xl border overflow-hidden',
+                    isPerfect ? 'bg-green-500/10 border-green-500/30 ring-1 ring-green-500/20' :
+                    isShamed ? 'bg-red-500/8 border-red-500/25' :
+                    cn(mColor.bg, mColor.border))}>
                     {/* Member Header */}
                     <button onClick={() => toggleMember(member.user.id)} className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
-                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0', mColor.avatarBg, mColor.accent)}>
-                        {getInitials(member.user.name)}
+                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
+                        isPerfect ? 'bg-green-500/25 text-green-400' :
+                        isShamed ? 'bg-red-500/20 text-red-400' :
+                        cn(mColor.avatarBg, mColor.accent))}>
+                        {isPerfect ? <Star className="w-5 h-5" /> : isShamed ? <Skull className="w-5 h-5" /> : getInitials(member.user.name)}
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-medium">
+                        <p className="font-medium flex items-center gap-1.5">
                           {member.user.name} {isMe && <span className="text-zinc-500">(You)</span>}
-                          {member.role === 'ADMIN' && <span className="ml-2 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">Admin</span>}
+                          {member.role === 'ADMIN' && <span className="ml-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">Admin</span>}
+                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-white/5')}>Lv.{lvl.level}</span>
                         </p>
                         <p className="text-xs text-zinc-500">
-                          {member.completedCount}/{member.totalCount} completed &middot; {member.score} pts today
+                          {noActivity ? <span className="text-red-400 font-medium">No activity today</span> :
+                            <>{member.completedCount}/{member.totalCount} completed</>}
+                          {' '}&middot; {member.totalXp || 0} XP
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className={cn('text-xl font-bold', mColor.accent)}>{member.score}</div>
+                        <div className={cn('text-xl font-bold', isPerfect ? 'text-green-400' : isShamed ? 'text-red-400' : mColor.accent)}>{member.score}%</div>
                         {isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
                       </div>
                     </button>
@@ -239,6 +252,12 @@ export default function GroupDetailPage() {
                                   {task.group && <span> &middot; {task.group.name}</span>}
                                 </p>
                               </div>
+                              {task.requiresProof && <Camera className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />}
+                              {task.proofUrl && task.completedToday && (
+                                <a href={task.proofUrl} target="_blank" rel="noopener" className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-white/10 hover:border-white/30">
+                                  <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
+                                </a>
+                              )}
                               <div className="px-2 py-0.5 rounded bg-surface-200 text-xs text-zinc-400">{task.weightage}pts</div>
                               {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-surface-200 text-zinc-600 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>

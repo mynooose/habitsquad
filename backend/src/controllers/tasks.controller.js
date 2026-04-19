@@ -3,6 +3,7 @@ const { createTaskSchema, updateTaskSchema } = require('../utils/validation');
 const { getTodayRange } = require('../utils/helpers');
 const taskQ = require('../queries/tasks.queries');
 const groupQ = require('../queries/groups.queries');
+const prisma = require('../database/prisma');
 
 async function getBudget(req, res, next) {
   try {
@@ -138,18 +139,29 @@ async function deleteTask(req, res, next) {
 
 async function completeTask(req, res, next) {
   try {
-    const { date, notes } = req.body;
+    const { date, notes, proofUrl } = req.body;
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
 
     const task = await taskQ.findTaskById(req.params.id, req.user.id);
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
+    if (task.requiresProof && !proofUrl) {
+      return res.status(400).json({ error: 'This task requires photo proof' });
+    }
+
     const existing = await taskQ.findCompletion(req.params.id, targetDate);
     if (existing) return res.status(400).json({ error: 'Task already completed for this date' });
 
-    const completion = await taskQ.createCompletion({ taskId: req.params.id, userId: req.user.id, date: targetDate, notes });
-    res.status(201).json({ completion });
+    const completion = await taskQ.createCompletion({ taskId: req.params.id, userId: req.user.id, date: targetDate, notes, proofUrl });
+
+    // Award XP
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { totalXp: { increment: task.weightage } }
+    });
+
+    res.status(201).json({ completion, xpEarned: task.weightage });
   } catch (error) {
     next(error);
   }
@@ -164,7 +176,17 @@ async function uncompleteTask(req, res, next) {
     const completion = await taskQ.findCompletionByUser(req.params.id, req.user.id, targetDate);
     if (!completion) return res.status(404).json({ error: 'Completion not found' });
 
+    // Get task weight to deduct XP
+    const task = await taskQ.findTaskById(req.params.id, req.user.id);
     await taskQ.deleteCompletion(completion.id);
+
+    // Deduct XP (min 0)
+    if (task) {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { totalXp: true } });
+      const newXp = Math.max(0, (user?.totalXp || 0) - task.weightage);
+      await prisma.user.update({ where: { id: req.user.id }, data: { totalXp: newXp } });
+    }
+
     res.json({ success: true });
   } catch (error) {
     next(error);

@@ -37,9 +37,41 @@ function getTodayRange() {
   return { today, tomorrow };
 }
 
+const LEVELS = [
+  { level: 1, xp: 0, name: 'Beginner' },
+  { level: 2, xp: 100, name: 'Starter' },
+  { level: 3, xp: 300, name: 'Committed' },
+  { level: 4, xp: 600, name: 'Dedicated' },
+  { level: 5, xp: 1000, name: 'Warrior' },
+  { level: 6, xp: 1500, name: 'Champion' },
+  { level: 7, xp: 2100, name: 'Legend' },
+  { level: 8, xp: 2800, name: 'Master' },
+  { level: 9, xp: 3600, name: 'Grandmaster' },
+  { level: 10, xp: 4500, name: 'Elite' },
+];
+
+function getLevel(xp) {
+  let current = LEVELS[0];
+  for (const l of LEVELS) {
+    if (xp >= l.xp) current = l;
+    else break;
+  }
+  const nextLevel = LEVELS.find(l => l.level === current.level + 1);
+  return {
+    level: current.level,
+    name: current.name,
+    currentXp: xp,
+    levelXp: current.xp,
+    nextLevelXp: nextLevel ? nextLevel.xp : null,
+    progress: nextLevel ? Math.round(((xp - current.xp) / (nextLevel.xp - current.xp)) * 100) : 100,
+  };
+}
+
 module.exports = {
   getApplicableTasks,
   computeDayScore,
   computeDayPercent,
   getTodayRange,
+  LEVELS,
+  getLevel,
 };

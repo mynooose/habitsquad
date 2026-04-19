@@ -18,6 +18,7 @@ const createTaskSchema = z.object({
   weightage: z.number().min(1).max(100).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   groupId: z.string().nullable().optional(),
+  requiresProof: z.boolean().optional(),
   redistribute: z.boolean().optional()
 });
 

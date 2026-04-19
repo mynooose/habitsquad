@@ -62,3 +62,33 @@ export function getRandomColor() {
 export function getInitials(name) {
   return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
+
+export const LEVELS = [
+  { level: 1, xp: 0, name: 'Beginner', color: 'text-zinc-400' },
+  { level: 2, xp: 100, name: 'Starter', color: 'text-blue-400' },
+  { level: 3, xp: 300, name: 'Committed', color: 'text-cyan-400' },
+  { level: 4, xp: 600, name: 'Dedicated', color: 'text-green-400' },
+  { level: 5, xp: 1000, name: 'Warrior', color: 'text-yellow-400' },
+  { level: 6, xp: 1500, name: 'Champion', color: 'text-orange-400' },
+  { level: 7, xp: 2100, name: 'Legend', color: 'text-red-400' },
+  { level: 8, xp: 2800, name: 'Master', color: 'text-purple-400' },
+  { level: 9, xp: 3600, name: 'Grandmaster', color: 'text-fuchsia-400' },
+  { level: 10, xp: 4500, name: 'Elite', color: 'text-amber-300' },
+];
+
+export function getLevel(xp) {
+  let current = LEVELS[0];
+  for (const l of LEVELS) {
+    if (xp >= l.xp) current = l;
+    else break;
+  }
+  const next = LEVELS.find(l => l.level === current.level + 1);
+  return {
+    level: current.level,
+    name: current.name,
+    color: current.color,
+    currentXp: xp,
+    nextLevelXp: next ? next.xp : null,
+    progress: next ? Math.round(((xp - current.xp) / (next.xp - current.xp)) * 100) : 100,
+  };
+}

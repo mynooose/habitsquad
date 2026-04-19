@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw, Camera } from 'lucide-react';
 import { cn, TASK_COLORS, FREQUENCIES } from '@/lib/utils';
 
 const DEFAULT_HABIT = () => ({
@@ -12,6 +12,7 @@ const DEFAULT_HABIT = () => ({
   title: '',
   frequency: 'DAILY',
   weightage: 100,
+  requiresProof: false,
   color: TASK_COLORS[Math.floor(Math.random() * TASK_COLORS.length)],
 });
 
@@ -476,6 +477,10 @@ export default function NewPage() {
                           </button>
                         ))}
                       </div>
+                      <button type="button" onClick={() => updateHabit(habit.id, 'requiresProof', !habit.requiresProof)}
+                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-surface-200 text-zinc-500 hover:text-white')}>
+                        <Camera className="w-3 h-3" /> Proof
+                      </button>
                       <div className="flex gap-1">
                         {TASK_COLORS.map(c => (
                           <button key={c} type="button" onClick={() => updateHabit(habit.id, 'color', c)}
