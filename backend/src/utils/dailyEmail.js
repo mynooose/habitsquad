@@ -1,13 +1,7 @@
 const cron = require('node-cron');
 const prisma = require('../database/prisma');
-const { Resend } = require('resend');
+const { sendEmail } = require('./mailer');
 const { getApplicableTasks } = require('./helpers');
-
-let resend;
-function getResend() {
-  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
-  return resend;
-}
 
 function buildTasksHtml(tasks, groups) {
   let html = '';
@@ -104,8 +98,7 @@ async function sendDailyEmails() {
           </div>
         `;
 
-        await getResend().emails.send({
-          from: 'HabitSquad <onboarding@resend.dev>',
+        await sendEmail({
           to: user.email,
           subject: `Your ${applicable.length} habits for today - ${dayName}`,
           html
