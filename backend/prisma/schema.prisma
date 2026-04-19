@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatar    String?  @db.Text
+  dob       DateTime?
+  gender    String?
+  bio              String?  @db.Text
+  dailyEmailEnabled Boolean  @default(false)
+  emailVerified     Boolean  @default(false)
+  verifyToken       String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks       Task[]
+  completions TaskCompletion[]
+  memberships GroupMembership[]
+  createdGroups Group[]
+  sentInvites   GroupInvite[]    @relation("InviteSender")
+
+  @@map("users")
+}
+
+model Task {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  frequency   TaskFrequency @default(DAILY)
+  weightage   Int           @default(5)
+  isActive    Boolean       @default(true)
+  color       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  completions TaskCompletion[]
+
+  @@map("tasks")
+}
+
+enum TaskFrequency {
+  DAILY
+  WEEKLY
+  ONCE
+  WEEKDAYS
+  WEEKENDS
+  CUSTOM
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  completedAt DateTime @default(now())
+  date        DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, date])
+  @@map("task_completions")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  inviteCode  String   @unique @default(cuid())
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  memberships GroupMembership[]
+  tasks       Task[]
+  invites     GroupInvite[]
+
+  @@map("groups")
+}
+
+model GroupMembership {
+  id       String    @id @default(cuid())
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("group_memberships")
+}
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+model GroupInvite {
+  id        String       @id @default(cuid())
+  email     String?
+  status    InviteStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  expiresAt DateTime?
+
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  invitedById String
+  invitedBy   User   @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  invitedUserId String?
+
+  @@unique([groupId, email])
+  @@map("group_invites")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
