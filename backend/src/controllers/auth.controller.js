@@ -36,11 +36,10 @@ async function register(req, res, next) {
       console.error('Failed to send verification email:', emailErr.message);
     }
 
-    const jwtToken = generateToken(user.id);
     res.status(201).json({
       user,
-      token: jwtToken,
-      message: 'Account created.'
+      message: 'Account created. Please check your email to verify your account.',
+      requiresVerification: true
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -107,6 +106,10 @@ async function login(req, res, next) {
 
     const validPassword = await bcrypt.compare(data.password, user.password);
     if (!validPassword) return res.status(401).json({ error: 'Invalid email or password' });
+
+    if (!user.emailVerified) {
+      return res.status(403).json({ error: 'Please verify your email before logging in', unverified: true, email: user.email });
+    }
 
     const token = generateToken(user.id);
     res.json({
