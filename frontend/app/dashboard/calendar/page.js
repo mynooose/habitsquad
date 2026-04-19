@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera } from 'lucide-react';
+// Link still used for group name links
 import { cn, getScoreColor, getScoreBgColor, getDateKey, isToday, getFrequencyLabel } from '@/lib/utils';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -33,22 +34,30 @@ export default function CalendarPage() {
 
   useEffect(() => { fetchCalendar(); }, [fetchCalendar]);
 
-  const isTodaySelected = selectedDate === getDateKey(new Date());
+  const todayKey = getDateKey(new Date());
+  const isTodaySelected = selectedDate === todayKey;
 
-  const handleToggle = async (task) => {
-    if (!isTodaySelected) return; // can only toggle today's tasks
+  const [proofTask, setProofTask] = useState(null);
+
+  const handleToggle = async (task, proofUrl = null) => {
+    if (!isTodaySelected) return;
+    if (!task.completed && task.requiresProof && !proofUrl) {
+      setProofTask(task);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completed) {
         await api.uncompleteTask(task.id);
       } else {
-        await api.completeTask(task.id);
+        await api.completeTask(task.id, null, proofUrl);
       }
       await fetchCalendar();
     } catch (error) {
       console.error('Failed:', error);
     } finally {
       setCompleting(null);
+      setProofTask(null);
     }
   };
 
@@ -195,7 +204,58 @@ export default function CalendarPage() {
           </div>
         ))}
       </div>
+
+      {/* Proof Modal */}
+      {proofTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setProofTask(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <Camera className="w-5 h-5 text-amber-400" />
+              <h2 className="text-lg font-bold">Photo Proof Required</h2>
+            </div>
+            <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{proofTask.title}"</span></p>
+            <ProofUpload onSubmit={(url) => handleToggle(proofTask, url)} onCancel={() => setProofTask(null)} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ProofUpload({ onSubmit, onCancel }) {
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <>
+      {preview ? (
+        <div className="mb-4">
+          <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
+          <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+        </div>
+      ) : (
+        <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+          <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+          <p className="text-sm text-zinc-400">Click to upload photo</p>
+          <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+          <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        </label>
+      )}
+      <div className="flex gap-3">
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+        <button onClick={() => { setUploading(true); onSubmit(preview); }} disabled={!preview || uploading}
+          className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
+        </button>
+      </div>
+    </>
   );
 }
 
