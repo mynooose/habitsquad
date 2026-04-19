@@ -89,7 +89,7 @@ export default function ProfilePage() {
   return (
     <div className="p-6 lg:p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-surface-100 text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
         <div>
           <h1 className="text-2xl font-bold">Profile</h1>
           <p className="text-zinc-400 text-sm">Manage your account details</p>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center mb-8">
         <div className="relative mb-3">
           {avatar ? (
-            <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full bg-surface-200 object-cover" />
+            <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full bg-[var(--card-bg-hover)] object-cover" />
           ) : (
             <div className="w-24 h-24 rounded-full gradient-accent flex items-center justify-center text-3xl font-bold text-white">
               {name?.charAt(0)?.toUpperCase() || '?'}
@@ -125,7 +125,7 @@ export default function ProfilePage() {
         {(() => {
           const lvl = getLevel(user?.totalXp || 0);
           return (
-            <div className="mt-4 p-4 rounded-xl bg-surface-100 border border-white/5 w-full max-w-xs">
+            <div className="mt-4 p-4 rounded-xl glass-card w-full max-w-xs">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
                 <div>
@@ -133,7 +133,7 @@ export default function ProfilePage() {
                   <p className="text-xs text-zinc-500">{user?.totalXp || 0} XP</p>
                 </div>
               </div>
-              <div className="h-2 rounded-full bg-surface-200 overflow-hidden">
+              <div className="h-2 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
                 <div className="h-full rounded-full bg-yellow-500 transition-all" style={{ width: `${lvl.progress}%` }} />
               </div>
               <p className="text-xs text-zinc-600 mt-1">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to next level` : 'Max level!'}</p>
@@ -144,11 +144,11 @@ export default function ProfilePage() {
 
       {/* Avatar picker */}
       {showAvatars && (
-        <div className="mb-6 p-4 rounded-xl bg-surface-100 border border-white/5">
+        <div className="mb-6 p-4 rounded-xl glass-card">
           <p className="text-sm font-medium mb-3">Choose an avatar</p>
 
           {/* Upload custom photo */}
-          <label className="block mb-4 p-4 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+          <label className="block mb-4 p-4 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-6 h-6 mx-auto mb-1 text-zinc-500" />
             <p className="text-sm text-zinc-400">Upload your own photo</p>
             <p className="text-xs text-zinc-600">JPG, PNG — max 2MB</p>
@@ -169,11 +169,11 @@ export default function ProfilePage() {
               <button key={i} onClick={() => { setAvatar(url); setShowAvatars(false); }}
                 className={cn('w-full aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-105',
                   avatar === url ? 'border-brand-500' : 'border-transparent')}>
-                <img src={url} alt={`Avatar ${i + 1}`} className="w-full h-full bg-surface-200" />
+                <img src={url} alt={`Avatar ${i + 1}`} className="w-full h-full bg-[var(--card-bg-hover)]" />
               </button>
             ))}
             <button onClick={() => { setAvatar(''); setShowAvatars(false); }}
-              className={cn('w-full aspect-square rounded-xl border-2 flex items-center justify-center bg-surface-200 text-zinc-500 hover:scale-105 transition-all',
+              className={cn('w-full aspect-square rounded-xl border-2 flex items-center justify-center bg-[var(--card-bg-hover)] text-zinc-500 hover:scale-105 transition-all',
                 !avatar ? 'border-brand-500' : 'border-transparent')}>
               <User className="w-6 h-6" />
             </button>
@@ -186,12 +186,12 @@ export default function ProfilePage() {
         <div>
           <label className="block text-sm font-medium mb-2">Full Name *</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
-            className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-white/10 focus:outline-none focus:border-brand-500" />
+            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2">Email</label>
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-100 border border-white/5 text-zinc-500">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl glass-card text-zinc-500">
             <Mail className="w-4 h-4" />
             {user?.email}
           </div>
@@ -201,7 +201,7 @@ export default function ProfilePage() {
         <div>
           <label className="block text-sm font-medium mb-2">Date of Birth</label>
           <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-white/10 focus:outline-none focus:border-brand-500 text-white [color-scheme:dark]" />
+            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500 text-white [color-scheme:dark]" />
         </div>
 
         <div>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
             {GENDERS.map(g => (
               <button key={g} type="button" onClick={() => setGender(gender === g ? '' : g)}
                 className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  gender === g ? 'bg-brand-500 text-white' : 'bg-surface-100 text-zinc-400 hover:text-white')}>
+                  gender === g ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
                 {g}
               </button>
             ))}
@@ -220,12 +220,12 @@ export default function ProfilePage() {
         <div>
           <label className="block text-sm font-medium mb-2">Bio</label>
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={3} maxLength={200}
-            className="w-full px-4 py-3 rounded-xl bg-surface-100 border border-white/10 placeholder-zinc-600 focus:outline-none focus:border-brand-500 resize-none" />
+            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 resize-none" />
           <p className="text-xs text-zinc-600 mt-1">{bio.length}/200</p>
         </div>
 
         {/* Daily Email Notification */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-100 border border-white/5">
+        <div className="flex items-center justify-between p-4 rounded-xl glass-card">
           <div>
             <p className="font-medium flex items-center gap-2">
               <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
@@ -233,13 +233,13 @@ export default function ProfilePage() {
             <p className="text-sm text-zinc-500">Get your planned tasks emailed every day at 7:00 AM</p>
           </div>
           <button type="button" onClick={() => setDailyEmail(!dailyEmail)}
-            className={cn('w-12 h-7 rounded-full transition-colors relative', dailyEmail ? 'bg-brand-500' : 'bg-surface-300')}>
+            className={cn('w-12 h-7 rounded-full transition-colors relative', dailyEmail ? 'bg-brand-500' : 'bg-[var(--card-bg-hover)]')}>
             <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
           </button>
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-surface-100 text-white font-medium text-center hover:bg-surface-200">Cancel</Link>
+          <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-white font-medium text-center hover:bg-[var(--card-bg-hover)]">Cancel</Link>
           <button onClick={handleSave} disabled={saving || !name.trim()}
             className="flex-1 py-3 rounded-xl gradient-brand text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : saved ? <><Check className="w-5 h-5" /> Saved!</> : 'Save Profile'}

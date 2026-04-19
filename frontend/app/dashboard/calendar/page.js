@@ -95,18 +95,18 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-bold mb-1">Calendar</h1>
           <p className="text-zinc-400">Track your habit completion over time</p>
         </div>
-        <button onClick={() => { setCurrentDate(new Date()); setSelectedDate(getDateKey(new Date())); }} className="px-4 py-2 rounded-lg bg-surface-100 hover:bg-surface-200 text-sm font-medium">Today</button>
+        <button onClick={() => { setCurrentDate(new Date()); setSelectedDate(getDateKey(new Date())); }} className="px-4 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm font-medium">Today</button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 rounded-2xl bg-surface-100 border border-white/5 overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-white/5">
-            <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="p-2 rounded-lg hover:bg-surface-200"><ChevronLeft className="w-5 h-5" /></button>
+        <div className="lg:col-span-2 rounded-2xl glass-card overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)]">
+            <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]"><ChevronLeft className="w-5 h-5" /></button>
             <h2 className="text-lg font-semibold">{MONTHS[month]} {year}</h2>
-            <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="p-2 rounded-lg hover:bg-surface-200"><ChevronRight className="w-5 h-5" /></button>
+            <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]"><ChevronRight className="w-5 h-5" /></button>
           </div>
 
-          <div className="grid grid-cols-7 border-b border-white/5">
+          <div className="grid grid-cols-7 border-b border-[var(--card-border)]">
             {DAYS.map(d => <div key={d} className="p-3 text-center text-xs font-medium text-zinc-500">{d}</div>)}
           </div>
 
@@ -120,10 +120,10 @@ export default function CalendarPage() {
                 const isTodayDate = day.isCurrentMonth && isToday(day.date);
                 return (
                   <button key={i} onClick={() => day.isCurrentMonth && setSelectedDate(day.dateKey)} disabled={!day.isCurrentMonth}
-                    className={cn('aspect-square p-2 border-b border-r border-white/5 flex flex-col items-center justify-center gap-1 relative',
-                      day.isCurrentMonth ? 'hover:bg-surface-200' : 'text-zinc-700 cursor-default',
+                    className={cn('aspect-square p-2 border-b border-r border-[var(--card-border)] flex flex-col items-center justify-center gap-1 relative',
+                      day.isCurrentMonth ? 'hover:bg-[var(--card-bg-hover)]' : 'text-zinc-700 cursor-default',
                       day.dateKey === selectedDate && 'bg-brand-500/10 ring-1 ring-brand-500',
-                      isTodayDate && 'bg-surface-200')}>
+                      isTodayDate && 'bg-[var(--card-bg-hover)]')}>
                     <span className={cn('text-sm font-medium', isTodayDate && 'text-brand-400')}>{day.day}</span>
                     {hasData && (
                       <div className={cn('w-8 h-1.5 rounded-full',
@@ -138,7 +138,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="rounded-2xl bg-surface-100 border border-white/5 p-5 h-fit sticky top-8 max-h-[calc(100vh-120px)] overflow-y-auto">
+        <div className="rounded-2xl glass-card p-5 h-fit sticky top-8 max-h-[calc(100vh-120px)] overflow-y-auto">
           {selectedDate && selectedData ? (
             <>
               <h3 className="font-semibold mb-4">{new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
@@ -208,7 +208,7 @@ export default function CalendarPage() {
       {/* Proof Modal */}
       {proofTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setProofTask(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg)] border border-[var(--input-border)] p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <Camera className="w-5 h-5 text-amber-400" />
               <h2 className="text-lg font-bold">Photo Proof Required</h2>
@@ -241,7 +241,7 @@ function ProofUpload({ onSubmit, onCancel }) {
           <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
         </div>
       ) : (
-        <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+        <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
           <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
           <p className="text-sm text-zinc-400">Click to upload photo</p>
           <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
@@ -249,7 +249,7 @@ function ProofUpload({ onSubmit, onCancel }) {
         </label>
       )}
       <div className="flex gap-3">
-        <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
         <button onClick={() => { setUploading(true); onSubmit(preview); }} disabled={!preview || uploading}
           className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}

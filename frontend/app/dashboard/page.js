@@ -79,7 +79,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold">{greeting}, {user?.name?.split(' ')[0]}!</h1>
-          <p className="text-sm text-zinc-500">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="text-sm text-muted">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
         <Link href="/dashboard/new" className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-sm font-medium">
           <Plus className="w-4 h-4" /> New Habit
@@ -87,9 +87,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Hero Score */}
-      <div className="p-6 rounded-2xl bg-surface-100 border border-white/5 mb-4">
+      <div className="p-6 rounded-2xl glass-card mb-4">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-sm text-zinc-500 uppercase tracking-wider font-medium">Today's Score</span>
+          <span className="text-sm text-muted uppercase tracking-wider font-medium">Today's Score</span>
           {delta !== 0 && (
             <div className={cn('flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold', delta > 0 ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400')}>
               {delta > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
@@ -105,22 +105,22 @@ export default function DashboardPage() {
         <div className="flex items-end gap-3 mb-4">
           <span className={cn('text-6xl font-black tabular-nums', getScoreColor(score))}>{score}%</span>
         </div>
-        <div className="h-3 rounded-full bg-surface-200 overflow-hidden">
+        <div className="h-3 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
           <div className={cn('h-full rounded-full transition-all duration-700', score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : score >= 40 ? 'bg-orange-500' : 'bg-red-500')} style={{ width: `${score}%` }} />
         </div>
-        <div className="flex justify-between mt-2 text-xs text-zinc-600">
+        <div className="flex justify-between mt-2 text-xs text-muted">
           <span>{dashStats?.today?.completedTasks || 0}/{dashStats?.today?.totalTasks || 0} habits done</span>
           <span>{dashStats?.today?.totalWeight || 0} pts allocated today</span>
         </div>
       </div>
 
       {/* Trends + Streaks */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         {/* Trends */}
-        <div className="p-4 rounded-xl bg-surface-100 border border-white/5">
+        <div className="p-4 rounded-xl glass-card">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Trends</span>
+            <span className="text-xs font-medium text-muted uppercase tracking-wider">Trends</span>
           </div>
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               <span className="text-sm text-zinc-400">Last week</span>
               <span className="text-sm font-bold">{dashStats?.lastWeek?.avgScore || 0}% avg</span>
             </div>
-            <div className="flex items-center justify-between border-t border-white/5 pt-2">
+            <div className="flex items-center justify-between border-t border-[var(--card-border)] pt-2">
               <span className="text-sm text-zinc-400">Personal best</span>
               <span className="text-sm font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span>
             </div>
@@ -146,14 +146,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Streaks */}
-        <div className="p-4 rounded-xl bg-surface-100 border border-white/5">
+        <div className="p-4 rounded-xl glass-card">
           <div className="flex items-center gap-2 mb-3">
             <Flame className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Streaks</span>
+            <span className="text-xs font-medium text-muted uppercase tracking-wider">Streaks</span>
           </div>
           <div className="flex items-end gap-1 mb-3">
             <span className="text-4xl font-black text-orange-400">{dashStats?.streak?.current || 0}</span>
-            <span className="text-sm text-zinc-500 mb-1.5">days</span>
+            <span className="text-sm text-muted mb-1.5">days</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-zinc-400">Longest</span>
@@ -166,22 +166,22 @@ export default function DashboardPage() {
       {user?.totalXp !== undefined && (() => {
         const lvl = getLevel(user.totalXp || 0);
         return (
-          <div className="p-4 rounded-xl bg-surface-100 border border-white/5 mb-4">
+          <div className="p-4 rounded-xl glass-card mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-400" />
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Level</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wider">Level</span>
               </div>
-              <span className="text-xs text-zinc-500">{user.totalXp || 0} XP total</span>
+              <span className="text-xs text-muted">{user.totalXp || 0} XP total</span>
             </div>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
               <div className="flex-1">
                 <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
-                <p className="text-xs text-zinc-500">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to Level ${lvl.level + 1}` : 'Max level reached!'}</p>
+                <p className="text-xs text-muted">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to Level ${lvl.level + 1}` : 'Max level reached!'}</p>
               </div>
             </div>
-            <div className="h-2 rounded-full bg-surface-200 overflow-hidden">
+            <div className="h-2 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
               <div className="h-full rounded-full bg-yellow-500 transition-all duration-500" style={{ width: `${lvl.progress}%` }} />
             </div>
           </div>
@@ -190,25 +190,25 @@ export default function DashboardPage() {
 
       {/* Rankings */}
       {rankings?.groups?.length > 0 && (
-        <div className="p-4 rounded-xl bg-surface-100 border border-white/5 mb-6">
+        <div className="p-4 rounded-xl glass-card mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">My Rankings</span>
+            <span className="text-xs font-medium text-muted uppercase tracking-wider">My Rankings</span>
           </div>
           <div className="space-y-2">
             {rankings.groups.map(g => (
               <Link key={g.groupId} href={`/dashboard/groups/${g.groupId}`} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors group">
-                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black', g.myRank === 1 ? 'bg-yellow-500/20 text-yellow-400' : g.myRank === 2 ? 'bg-zinc-400/20 text-zinc-400' : g.myRank === 3 ? 'bg-amber-600/20 text-amber-500' : 'bg-surface-200 text-zinc-500')}>
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black', g.myRank === 1 ? 'bg-yellow-500/20 text-yellow-400' : g.myRank === 2 ? 'bg-zinc-400/20 text-zinc-400' : g.myRank === 3 ? 'bg-amber-600/20 text-amber-500' : 'bg-[var(--card-bg-hover)] text-muted')}>
                   #{g.myRank}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{g.groupName}</p>
-                  <p className="text-xs text-zinc-600">{g.totalMembers} members</p>
+                  <p className="text-xs text-muted">{g.totalMembers} members</p>
                 </div>
                 <div className="text-right">
                   <p className={cn('text-sm font-bold', getScoreColor(g.myScore))}>{g.myScore}%</p>
                   {g.topUser && g.topScore > g.myScore && (
-                    <p className="text-xs text-zinc-600">Leader: {g.topScore}%</p>
+                    <p className="text-xs text-muted">Leader: {g.topScore}%</p>
                   )}
                   {g.myRank === 1 && <p className="text-xs text-yellow-500">Leading!</p>}
                 </div>
@@ -221,8 +221,8 @@ export default function DashboardPage() {
 
       {/* Empty state */}
       {tasks.length === 0 && (
-        <div className="text-center py-16 rounded-2xl bg-surface-100 border border-white/5">
-          <Target className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
+        <div className="text-center py-16 rounded-2xl glass-card">
+          <Target className="w-12 h-12 mx-auto mb-4 text-muted" />
           <h3 className="text-lg font-semibold mb-2">No habits yet</h3>
           <p className="text-zinc-400 mb-6">Create your first habit to start tracking</p>
           <Link href="/dashboard/new" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand font-medium"><Plus className="w-4 h-4" /> Create Habit</Link>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
               <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-surface-100" />
+            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
         </div>
       )}
@@ -281,7 +281,7 @@ function ProofModal({ task, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg)] border border-[var(--input-border)] p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
@@ -294,16 +294,16 @@ function ProofModal({ task, onClose, onSubmit }) {
             <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
           </div>
         ) : (
-          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
-            <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
+            <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
             <p className="text-sm text-zinc-400">Click to upload photo</p>
-            <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+            <p className="text-xs text-muted mt-1">JPG, PNG — max 2MB</p>
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
         )}
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
           <button onClick={handleSubmit} disabled={!preview || uploading}
             className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
@@ -325,27 +325,27 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
         {groupId ? (
           <Link href={`/dashboard/groups/${groupId}`} className="flex items-center gap-2 group">
             <div className="w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: (color || '#8b5cf6') + '30', color: color || '#8b5cf6' }}>{title.charAt(0)}</div>
-            <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider group-hover:text-zinc-300 transition-colors">{title}</h2>
-            <ChevronRight className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100" />
+            <h2 className="text-xs font-semibold text-muted uppercase tracking-wider group-hover:text-zinc-300 transition-colors">{title}</h2>
+            <ChevronRight className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100" />
           </Link>
         ) : (
           <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-zinc-500" />
-            <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">{title}</h2>
+            <Target className="w-4 h-4 text-muted" />
+            <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">{title}</h2>
           </div>
         )}
-        <span className="text-xs text-zinc-600 ml-auto">{completedCount}/{tasks.length} &middot; {completedPts}/{totalPts} pts</span>
+        <span className="text-xs text-muted ml-auto">{completedCount}/{tasks.length} &middot; {completedPts}/{totalPts} pts</span>
       </div>
-      <div className="rounded-xl bg-surface-100 border border-white/5 divide-y divide-white/5 overflow-hidden">
+      <div className="rounded-2xl glass-card divide-y divide-[var(--card-border)] overflow-hidden">
         {tasks.map(task => (
           <div key={task.id} className={cn('flex items-center gap-3 px-4 py-3 group transition-colors', task.completedToday ? 'bg-green-500/5' : 'hover:bg-white/[0.02]')}>
             <button onClick={() => onToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
-              {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-zinc-600 hover:text-green-400 transition-colors" />}
+              {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
             </button>
             <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
             <div className="flex-1 min-w-0">
-              <p className={cn('text-sm font-medium', task.completedToday && 'text-zinc-500 line-through')}>{task.title}</p>
-              <p className="text-xs text-zinc-600">{getFrequencyLabel(task.frequency)}</p>
+              <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
+              <p className="text-xs text-muted">{getFrequencyLabel(task.frequency)}</p>
             </div>
             {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
             {task.proofUrl && task.completedToday && (
@@ -354,8 +354,8 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
                 <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
               </button>
             )}
-            <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
-            <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-surface-200 text-zinc-500')}>{task.weightage}pts</div>
+            <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
+            <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-[var(--card-bg-hover)] text-muted')}>{task.weightage}pts</div>
           </div>
         ))}
       </div>

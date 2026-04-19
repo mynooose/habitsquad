@@ -49,7 +49,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex flex-1 items-center justify-center bg-surface-100 border-r border-white/5">
+      <div className="hidden lg:flex flex-1 items-center justify-center bg-[var(--card-bg)] border-r border-[var(--card-border)]">
         <div className="max-w-md text-center p-12">
           <div className="w-20 h-20 rounded-2xl gradient-accent flex items-center justify-center mx-auto mb-8">
             <Target className="w-10 h-10 text-white" />
@@ -90,7 +90,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-surface-100 border border-white/10 placeholder-zinc-500 focus:outline-none focus:border-brand-500" />
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
             </div>
             <div>
@@ -98,7 +98,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-surface-100 border border-white/10 placeholder-zinc-500 focus:outline-none focus:border-brand-500" />
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
             </div>
             <div>
@@ -106,7 +106,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-surface-100 border border-white/10 placeholder-zinc-500 focus:outline-none focus:border-brand-500" />
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               </div>
               <p className="mt-2 text-xs text-zinc-500">At least 6 characters</p>
             </div>
@@ -144,7 +144,7 @@ function ResendButton({ email }) {
 
   return (
     <button onClick={handleResend} disabled={sending || sent}
-      className="w-full py-3 rounded-xl bg-surface-100 text-zinc-400 font-medium hover:bg-surface-200 disabled:opacity-50">
+      className="w-full py-3 rounded-xl bg-[var(--card-bg)] text-zinc-400 font-medium hover:bg-[var(--card-bg-hover)] disabled:opacity-50">
       {sending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : sent ? 'Email sent!' : "Didn't get it? Resend"}
     </button>
   );

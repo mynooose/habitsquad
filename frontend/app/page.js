@@ -24,7 +24,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-[var(--card-border)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
@@ -55,12 +55,12 @@ export default function Home() {
             <Link href="/register" className="w-full sm:w-auto px-8 py-3 rounded-xl gradient-brand text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90">
               Start Free <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/login" className="w-full sm:w-auto px-8 py-3 rounded-xl bg-surface-100 border border-white/10 font-semibold hover:bg-surface-200">Sign In</Link>
+            <Link href="/login" className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] font-semibold hover:bg-[var(--card-bg-hover)]">Sign In</Link>
           </div>
         </div>
       </section>
 
-      <section className="py-20 px-6 border-t border-white/5">
+      <section className="py-20 px-6 border-t border-[var(--card-border)]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Everything you need</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -70,8 +70,8 @@ export default function Home() {
               { icon: Users, title: 'Groups', desc: 'Create accountability squads.', color: 'text-purple-400' },
               { icon: TrendingUp, title: 'Leaderboards', desc: 'Compete with your squad.', color: 'text-orange-400' },
             ].map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-surface-100 border border-white/5">
-                <div className={`w-12 h-12 rounded-xl bg-surface-200 flex items-center justify-center mb-4 ${f.color}`}>
+              <div key={i} className="p-6 rounded-2xl glass-card">
+                <div className={`w-12 h-12 rounded-xl bg-[var(--card-bg-hover)] flex items-center justify-center mb-4 ${f.color}`}>
                   <f.icon className="w-6 h-6" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
@@ -82,7 +82,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="py-8 px-6 border-t border-white/5">
+      <footer className="py-8 px-6 border-t border-[var(--card-border)]">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md gradient-brand flex items-center justify-center">

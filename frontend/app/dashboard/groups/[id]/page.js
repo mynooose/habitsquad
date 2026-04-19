@@ -136,7 +136,7 @@ export default function GroupDetailPage() {
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-surface-100 text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-zinc-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -151,12 +151,12 @@ export default function GroupDetailPage() {
       </div>
 
       {/* Invite Code */}
-      <div className="p-4 rounded-xl bg-surface-100 border border-white/5 flex items-center gap-4 mb-6">
+      <div className="p-4 rounded-xl glass-card flex items-center gap-4 mb-6">
         <div className="flex-1">
           <p className="text-xs text-zinc-500 mb-1">Invite Code</p>
           <code className="text-lg font-mono">{group.inviteCode}</code>
         </div>
-        <button onClick={copyCode} className="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 flex items-center gap-2 text-sm">
+        <button onClick={copyCode} className="px-4 py-2 rounded-lg bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg-hover)] flex items-center gap-2 text-sm">
           {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
           {copied ? 'Copied!' : 'Copy'}
         </button>
@@ -166,7 +166,7 @@ export default function GroupDetailPage() {
       <div className="flex gap-2 mb-6">
         {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-surface-100')}>
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -177,13 +177,13 @@ export default function GroupDetailPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">Member Activity</h2>
-            <Link href={`/dashboard/new?groupId=${groupId}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-100 hover:bg-surface-200 text-sm">
+            <Link href={`/dashboard/new?groupId=${groupId}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm">
               <Plus className="w-4 h-4" /> Add Habit
             </Link>
           </div>
 
           {memberTasks.length === 0 ? (
-            <div className="text-center py-12 rounded-xl bg-surface-100 border border-white/5">
+            <div className="text-center py-12 rounded-xl glass-card">
               <Target className="w-8 h-8 mx-auto mb-3 text-zinc-600" />
               <p className="text-zinc-400">No members with tasks yet</p>
             </div>
@@ -231,10 +231,10 @@ export default function GroupDetailPage() {
 
                     {/* Member Tasks */}
                     {isExpanded && member.tasks.length > 0 && (
-                      <div className="border-t border-white/5">
+                      <div className="border-t border-[var(--card-border)]">
                         {/* Progress bar */}
                         <div className="px-4 pt-3 pb-1">
-                          <div className="h-1.5 rounded-full bg-surface-200 overflow-hidden">
+                          <div className="h-1.5 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
                             <div className="h-full rounded-full gradient-brand transition-all duration-500" style={{ width: `${member.score}%` }} />
                           </div>
                         </div>
@@ -266,8 +266,8 @@ export default function GroupDetailPage() {
                                   <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
                                 </button>
                               )}
-                              <div className="px-2 py-0.5 rounded bg-surface-200 text-xs text-zinc-400">{task.weightage}pts</div>
-                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-surface-200 text-zinc-600 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
+                              <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-zinc-400">{task.weightage}pts</div>
+                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-zinc-600 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>
                           ))}
                         </div>
@@ -276,7 +276,7 @@ export default function GroupDetailPage() {
 
                     {/* No tasks state */}
                     {isExpanded && member.tasks.length === 0 && (
-                      <div className="border-t border-white/5 p-4 text-center text-sm text-zinc-500">
+                      <div className="border-t border-[var(--card-border)] p-4 text-center text-sm text-zinc-500">
                         No active habits yet
                       </div>
                     )}
@@ -295,21 +295,21 @@ export default function GroupDetailPage() {
             <h2 className="font-semibold">Leaderboard</h2>
             <div className="flex gap-2">
               {['week', 'month'].map(p => (
-                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-surface-100 text-zinc-400 hover:text-white')}>
+                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-zinc-400 hover:text-white')}>
                   {p === 'week' ? 'This Week' : 'This Month'}
                 </button>
               ))}
             </div>
           </div>
-          <div className="rounded-xl bg-surface-100 border border-white/5 overflow-hidden">
+          <div className="rounded-xl glass-card overflow-hidden">
             {leaderboard.map((entry, i) => {
               const isMe = entry.user.id === user?.id;
               return (
-                <div key={entry.user.id} className={cn('flex items-center gap-4 p-4 border-b border-white/5 last:border-0', isMe && 'bg-green-500/5')}>
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center font-bold', i === 0 ? 'bg-yellow-500/20 text-yellow-500' : i === 1 ? 'bg-zinc-500/20 text-zinc-400' : i === 2 ? 'bg-amber-600/20 text-amber-600' : 'bg-surface-200 text-zinc-500')}>
+                <div key={entry.user.id} className={cn('flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0', isMe && 'bg-green-500/5')}>
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center font-bold', i === 0 ? 'bg-yellow-500/20 text-yellow-500' : i === 1 ? 'bg-zinc-500/20 text-zinc-400' : i === 2 ? 'bg-amber-600/20 text-amber-600' : 'bg-[var(--card-bg-hover)] text-zinc-500')}>
                     {entry.rank}
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-surface-200 flex items-center justify-center text-sm font-medium">{getInitials(entry.user.name)}</div>
+                  <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(entry.user.name)}</div>
                   <div className="flex-1">
                     <p className="font-medium">{entry.user.name} {isMe && <span className="text-zinc-500">(You)</span>}</p>
                     <p className="text-xs text-zinc-500">{entry.completions} completions</p>
@@ -325,10 +325,10 @@ export default function GroupDetailPage() {
       {/* Members Tab */}
       {tab === 'members' && (
         <div>
-          <div className="rounded-xl bg-surface-100 border border-white/5 overflow-hidden mb-4">
+          <div className="rounded-xl glass-card overflow-hidden mb-4">
             {group.memberships?.map(m => (
-              <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-white/5 last:border-0">
-                <div className="w-10 h-10 rounded-full bg-surface-200 flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
+              <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
+                <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
                 <div className="flex-1">
                   <p className="font-medium">{m.user.name} {m.user.id === user?.id && <span className="text-zinc-500">(You)</span>}</p>
                   <p className="text-xs text-zinc-500">{m.user.email}</p>
@@ -344,10 +344,10 @@ export default function GroupDetailPage() {
           {group.invites?.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-zinc-400 mb-2">Pending Invites</h3>
-              <div className="rounded-xl bg-surface-100 border border-white/5 overflow-hidden">
+              <div className="rounded-xl glass-card overflow-hidden">
                 {group.invites.map(inv => (
-                  <div key={inv.id} className="flex items-center gap-4 p-4 border-b border-white/5 last:border-0">
-                    <div className="w-10 h-10 rounded-full bg-surface-200 flex items-center justify-center"><Mail className="w-4 h-4 text-zinc-500" /></div>
+                  <div key={inv.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
+                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center"><Mail className="w-4 h-4 text-zinc-500" /></div>
                     <div className="flex-1">
                       <p className="font-medium">{inv.email}</p>
                       <p className="text-xs text-zinc-500">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
@@ -368,7 +368,7 @@ export default function GroupDetailPage() {
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
             <p className="text-sm mb-4">Leave this group?</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowLeave(false)} className="flex-1 py-2 rounded-lg bg-surface-100 text-sm font-medium">Cancel</button>
+              <button onClick={() => setShowLeave(false)} className="flex-1 py-2 rounded-lg bg-[var(--card-bg)] text-sm font-medium">Cancel</button>
               <button onClick={handleLeave} disabled={leaving} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium disabled:opacity-50">
                 {leaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Leave'}
               </button>
@@ -395,7 +395,7 @@ export default function GroupDetailPage() {
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
               <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-surface-100" />
+            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
         </div>
       )}
@@ -418,7 +418,7 @@ function ProofModal({ task, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg)] border border-[var(--input-border)] p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
@@ -430,7 +430,7 @@ function ProofModal({ task, onClose, onSubmit }) {
             <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
           </div>
         ) : (
-          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
             <p className="text-sm text-zinc-400">Click to upload photo</p>
             <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
@@ -438,7 +438,7 @@ function ProofModal({ task, onClose, onSubmit }) {
           </label>
         )}
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
           <button onClick={() => { setUploading(true); onSubmit(preview); }} disabled={!preview || uploading}
             className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
@@ -498,19 +498,19 @@ function InviteModal({ group, onClose, onInvited }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg)] border border-[var(--input-border)] p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">Invite to {group.name}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-200"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]"><X className="w-5 h-5" /></button>
         </div>
 
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
         <div className="flex gap-2 mb-4">
-          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-surface-200' : 'text-zinc-400 hover:text-white')}>
+          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-[var(--card-bg-hover)]' : 'text-zinc-400 hover:text-white')}>
             <Users className="w-4 h-4 inline mr-2" />Search Users
           </button>
-          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-surface-200' : 'text-zinc-400 hover:text-white')}>
+          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-[var(--card-bg-hover)]' : 'text-zinc-400 hover:text-white')}>
             <Mail className="w-4 h-4 inline mr-2" />Email Invite
           </button>
         </div>
@@ -520,15 +520,15 @@ function InviteModal({ group, onClose, onInvited }) {
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-200 border border-white/10 placeholder-zinc-500 focus:outline-none focus:border-brand-500" />
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
             </div>
             <div className="max-h-64 overflow-y-auto space-y-2">
               {users.length === 0 && search.length >= 2 && <p className="text-center text-zinc-500 py-4">No users found</p>}
               {users.map(u => {
                 const isInvited = invited.includes(u.id);
                 return (
-                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-200">
-                    <div className="w-10 h-10 rounded-full bg-surface-300 flex items-center justify-center text-sm font-medium">{getInitials(u.name)}</div>
+                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card-bg-hover)]">
+                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(u.name)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{u.name}</p>
                       <p className="text-xs text-zinc-500 truncate">{u.email}</p>
@@ -549,7 +549,7 @@ function InviteModal({ group, onClose, onInvited }) {
             <p className="text-sm text-zinc-400">Invite someone who isn't on HabitSquad yet.</p>
             <div className="flex gap-2">
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="friend@example.com"
-                className="flex-1 px-4 py-3 rounded-xl bg-surface-200 border border-white/10 placeholder-zinc-500 focus:outline-none focus:border-brand-500" />
+                className="flex-1 px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
               <button type="submit" disabled={loading || !email.includes('@')} className="px-4 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50">
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send'}
               </button>
@@ -560,7 +560,7 @@ function InviteModal({ group, onClose, onInvited }) {
           </form>
         )}
 
-        <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Done</button>
+        <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Done</button>
       </div>
     </div>
   );
