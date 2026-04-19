@@ -82,15 +82,16 @@ async function inviteToGroup(req, res, next) {
       if (existingInvite && existingInvite.status === 'PENDING') return res.status(400).json({ error: 'Invite already sent to this email' });
       const invite = await groupQ.upsertInvite(req.params.id, data.email, req.user.id);
 
-      try {
-        const group = await prisma.group.findUnique({ where: { id: req.params.id } });
-        const inviter = await prisma.user.findUnique({ where: { id: req.user.id } });
-        await sendGroupInviteEmail({ to: data.email, inviterName: inviter.name, groupName: group.name, inviteCode: group.inviteCode });
-      } catch (emailErr) {
-        console.error('Failed to send invite email:', emailErr.message);
-      }
+      // Respond immediately; send email in background
+      res.json({ success: true, invite, message: 'Invite sent' });
 
-      return res.json({ success: true, invite, message: 'Invite sent' });
+      Promise.all([
+        prisma.group.findUnique({ where: { id: req.params.id }, select: { name: true, inviteCode: true } }),
+        prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
+      ]).then(([group, inviter]) => {
+        return sendGroupInviteEmail({ to: data.email, inviterName: inviter.name, groupName: group.name, inviteCode: group.inviteCode });
+      }).catch(err => console.error('Failed to send invite email:', err.message));
+      return;
     }
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });

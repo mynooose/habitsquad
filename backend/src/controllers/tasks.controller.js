@@ -65,14 +65,21 @@ async function createTask(req, res, next) {
       const base = Math.floor(100 / totalCount);
       const remainder = 100 - (base * totalCount);
 
-      for (let i = 0; i < existing.length; i++) {
-        await taskQ.updateTask(existing[i].id, { weightage: base + (i < remainder ? 1 : 0) });
-      }
-
       data.weightage = base + (existing.length < remainder ? 1 : 0);
       delete data.redistribute;
-      const task = await taskQ.createTask({ ...data, userId: req.user.id });
-      return res.status(201).json({ task });
+
+      // Batch all updates + create in a single transaction (one network round trip)
+      const [, newTask] = await prisma.$transaction([
+        ...existing.map((t, i) =>
+          prisma.task.update({ where: { id: t.id }, data: { weightage: base + (i < remainder ? 1 : 0) } })
+        ),
+        prisma.task.create({
+          data: { ...data, userId: req.user.id },
+          include: { group: { select: { id: true, name: true, color: true } } }
+        })
+      ]).then(results => [results.slice(0, -1), results[results.length - 1]]);
+
+      return res.status(201).json({ task: newTask });
     }
 
     // Normal mode with budget check
@@ -103,19 +110,14 @@ async function updateTask(req, res, next) {
     }
 
     const targetGroupId = data.groupId !== undefined ? data.groupId : existing.groupId;
-    if (data.weightage !== undefined && data.isActive !== false) {
+    const needsBudgetCheck = (data.weightage !== undefined && data.isActive !== false) || (data.isActive === true && !existing.isActive);
+
+    if (needsBudgetCheck) {
       const budget = await taskQ.getWeightageBudget(req.user.id, targetGroupId || null, req.params.id);
-      if (data.weightage > budget.remaining) {
+      const weight = data.weightage !== undefined ? data.weightage : existing.weightage;
+      if (weight > budget.remaining) {
         const label = targetGroupId ? 'this group' : 'personal tasks';
         return res.status(400).json({ error: `Weight budget exceeded for ${label}. You have ${budget.remaining} points remaining out of 100.` });
-      }
-    }
-
-    if (data.isActive === true && !existing.isActive) {
-      const budget = await taskQ.getWeightageBudget(req.user.id, targetGroupId || null, req.params.id);
-      const weight = data.weightage || existing.weightage;
-      if (weight > budget.remaining) {
-        return res.status(400).json({ error: `Cannot reactivate. You have ${budget.remaining} points remaining out of 100, but this task needs ${weight}.` });
       }
     }
 
@@ -144,23 +146,23 @@ async function completeTask(req, res, next) {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
 
-    const task = await taskQ.findTaskById(req.params.id, req.user.id);
-    if (!task) return res.status(404).json({ error: 'Task not found' });
+    // Parallel: fetch task + check existing completion
+    const [task, existing] = await Promise.all([
+      taskQ.findTaskById(req.params.id, req.user.id),
+      taskQ.findCompletion(req.params.id, targetDate)
+    ]);
 
+    if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.requiresProof && !proofUrl) {
       return res.status(400).json({ error: 'This task requires photo proof' });
     }
-
-    const existing = await taskQ.findCompletion(req.params.id, targetDate);
     if (existing) return res.status(400).json({ error: 'Task already completed for this date' });
 
-    const completion = await taskQ.createCompletion({ taskId: req.params.id, userId: req.user.id, date: targetDate, notes, proofUrl });
-
-    // Award XP
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { totalXp: { increment: task.weightage } }
-    });
+    // Parallel: create completion + award XP
+    const [completion] = await Promise.all([
+      taskQ.createCompletion({ taskId: req.params.id, userId: req.user.id, date: targetDate, notes, proofUrl }),
+      prisma.user.update({ where: { id: req.user.id }, data: { totalXp: { increment: task.weightage } } })
+    ]);
 
     res.status(201).json({ completion, xpEarned: task.weightage });
   } catch (error) {
@@ -174,18 +176,27 @@ async function uncompleteTask(req, res, next) {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
 
-    const completion = await taskQ.findCompletionByUser(req.params.id, req.user.id, targetDate);
+    // Parallel: fetch completion + task
+    const [completion, task] = await Promise.all([
+      taskQ.findCompletionByUser(req.params.id, req.user.id, targetDate),
+      taskQ.findTaskById(req.params.id, req.user.id)
+    ]);
+
     if (!completion) return res.status(404).json({ error: 'Completion not found' });
 
-    // Get task weight to deduct XP
-    const task = await taskQ.findTaskById(req.params.id, req.user.id);
-    await taskQ.deleteCompletion(completion.id);
+    // Parallel: delete completion + deduct XP
+    await Promise.all([
+      taskQ.deleteCompletion(completion.id),
+      task ? prisma.user.update({
+        where: { id: req.user.id },
+        data: { totalXp: { decrement: Math.min(task.weightage, Number.MAX_SAFE_INTEGER) } }
+      }).catch(() => {}) : Promise.resolve()
+    ]);
 
-    // Deduct XP (min 0)
-    if (task) {
-      const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { totalXp: true } });
-      const newXp = Math.max(0, (user?.totalXp || 0) - task.weightage);
-      await prisma.user.update({ where: { id: req.user.id }, data: { totalXp: newXp } });
+    // Floor at 0 (separate update only if needed)
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { totalXp: true } });
+    if (user && user.totalXp < 0) {
+      await prisma.user.update({ where: { id: req.user.id }, data: { totalXp: 0 } });
     }
 
     res.json({ success: true });
