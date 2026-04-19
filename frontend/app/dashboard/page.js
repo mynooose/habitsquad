@@ -87,40 +87,40 @@ export default function DashboardPage() {
       </div>
 
       {/* Hero Score */}
-      <div className="p-6 rounded-2xl glass-card mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm text-muted uppercase tracking-wider font-medium">Today's Score</span>
-          {delta !== 0 && (
-            <div className={cn('flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold', delta > 0 ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400')}>
-              {delta > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-              {delta > 0 ? '+' : ''}{delta}% vs yesterday
-            </div>
-          )}
-          {delta === 0 && dashStats?.yesterday && (
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-zinc-500/15 text-zinc-400">
-              <Minus className="w-3 h-3" /> same as yesterday
-            </div>
-          )}
-        </div>
-        <div className="flex items-end gap-3 mb-4">
-          <span className={cn('text-6xl font-black tabular-nums', getScoreColor(score))}>{score}%</span>
-        </div>
-        <div className="h-3 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
-          <div className={cn('h-full rounded-full transition-all duration-700', score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : score >= 40 ? 'bg-orange-500' : 'bg-red-500')} style={{ width: `${score}%` }} />
-        </div>
-        <div className="flex justify-between mt-2 text-xs text-muted">
-          <span>{dashStats?.today?.completedTasks || 0}/{dashStats?.today?.totalTasks || 0} habits done</span>
-          <span>{dashStats?.today?.totalWeight || 0} pts allocated today</span>
+      <div className="p-6 rounded-[20px] gradient-brand text-white mb-5 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNTAiIGN5PSI1MCIgcj0iMTIwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PGNpcmNsZSBjeD0iNTAiIGN5PSIxNTAiIHI9IjgwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIi8+PC9zdmc+')] opacity-60" />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-white/70 uppercase tracking-wider">Today's Score</span>
+            {delta !== 0 && (
+              <div className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold', delta > 0 ? 'bg-white/20 text-white' : 'bg-red-500/30 text-red-100')}>
+                {delta > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                {delta > 0 ? '+' : ''}{delta}% vs yesterday
+              </div>
+            )}
+          </div>
+          <div className="flex items-end gap-3 mb-4">
+            <span className="text-6xl md:text-7xl font-black tabular-nums text-white">{score}%</span>
+          </div>
+          <div className="h-2.5 rounded-full bg-white/20 overflow-hidden mb-2">
+            <div className="h-full rounded-full bg-white/80 transition-all duration-700" style={{ width: `${score}%` }} />
+          </div>
+          <div className="flex justify-between text-xs text-white/60">
+            <span>{dashStats?.today?.completedTasks || 0}/{dashStats?.today?.totalTasks || 0} habits done</span>
+            <span>{dashStats?.today?.totalWeight || 0} pts allocated</span>
+          </div>
         </div>
       </div>
 
       {/* Trends + Streaks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         {/* Trends */}
-        <div className="p-4 rounded-xl glass-card">
+        <div className="p-5 rounded-[20px] stat-blue glass-card-interactive">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium text-muted uppercase tracking-wider">Trends</span>
+            <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Trends</span>
           </div>
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -146,10 +146,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Streaks */}
-        <div className="p-4 rounded-xl glass-card">
+        <div className="p-5 rounded-[20px] stat-orange glass-card-interactive">
           <div className="flex items-center gap-2 mb-3">
-            <Flame className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-medium text-muted uppercase tracking-wider">Streaks</span>
+            <div className="w-9 h-9 rounded-xl gradient-orange flex items-center justify-center">
+              <Flame className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Streaks</span>
           </div>
           <div className="flex items-end gap-1 mb-3">
             <span className="text-4xl font-black text-orange-400">{dashStats?.streak?.current || 0}</span>
@@ -166,16 +168,18 @@ export default function DashboardPage() {
       {user?.totalXp !== undefined && (() => {
         const lvl = getLevel(user.totalXp || 0);
         return (
-          <div className="p-4 rounded-xl glass-card mb-4">
+          <div className="p-5 rounded-[20px] stat-yellow glass-card-interactive mb-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                <span className="text-xs font-medium text-muted uppercase tracking-wider">Level</span>
+                <div className="w-9 h-9 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                </div>
+                <span className="text-xs font-semibold text-muted uppercase tracking-wider">Level</span>
               </div>
-              <span className="text-xs text-muted">{user.totalXp || 0} XP total</span>
+              <span className="text-xs text-muted font-medium">{user.totalXp || 0} XP</span>
             </div>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
+              <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-xl font-black text-yellow-400">{lvl.level}</div>
               <div className="flex-1">
                 <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
                 <p className="text-xs text-muted">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to Level ${lvl.level + 1}` : 'Max level reached!'}</p>
@@ -190,10 +194,12 @@ export default function DashboardPage() {
 
       {/* Rankings */}
       {rankings?.groups?.length > 0 && (
-        <div className="p-4 rounded-xl glass-card mb-6">
+        <div className="p-5 rounded-[20px] stat-purple glass-card-interactive mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <Trophy className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium text-muted uppercase tracking-wider">My Rankings</span>
+            <div className="w-9 h-9 rounded-xl gradient-accent flex items-center justify-center">
+              <Trophy className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">My Rankings</span>
           </div>
           <div className="space-y-2">
             {rankings.groups.map(g => (
@@ -336,7 +342,7 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
         )}
         <span className="text-xs text-muted ml-auto">{completedCount}/{tasks.length} &middot; {completedPts}/{totalPts} pts</span>
       </div>
-      <div className="rounded-2xl glass-card divide-y divide-[var(--card-border)] overflow-hidden">
+      <div className="rounded-[20px] glass-card divide-y divide-[var(--card-border)] overflow-hidden">
         {tasks.map(task => (
           <div key={task.id} className={cn('flex items-center gap-3 px-4 py-3 group transition-colors', task.completedToday ? 'bg-green-500/5' : 'hover:bg-white/[0.02]')}>
             <button onClick={() => onToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
