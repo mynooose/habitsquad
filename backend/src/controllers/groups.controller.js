@@ -114,13 +114,24 @@ async function getMemberTasks(req, res, next) {
 
     const members = await groupQ.findGroupMembers(req.params.id);
     const { today, tomorrow } = getTodayRange();
+    const memberIds = members.map(m => m.userId);
 
-    const memberTasks = await Promise.all(members.map(async (m) => {
-      const tasks = await prisma.task.findMany({
-        where: { userId: m.userId, groupId: req.params.id, isActive: true },
+    // Batched queries — 3 total instead of N*3
+    const [allTasks, xpList] = await Promise.all([
+      prisma.task.findMany({
+        where: { userId: { in: memberIds }, groupId: req.params.id, isActive: true },
         include: { completions: { where: { date: { gte: today, lt: tomorrow } } }, group: { select: { id: true, name: true, color: true } } },
         orderBy: { createdAt: 'desc' }
-      });
+      }),
+      prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, totalXp: true } })
+    ]);
+
+    const xpMap = Object.fromEntries(xpList.map(u => [u.id, u.totalXp]));
+    const tasksByUser = {};
+    allTasks.forEach(t => { if (!tasksByUser[t.userId]) tasksByUser[t.userId] = []; tasksByUser[t.userId].push(t); });
+
+    const memberTasks = members.map(m => {
+      const tasks = tasksByUser[m.userId] || [];
       const tasksWithStatus = tasks.map(t => ({
         id: t.id, title: t.title, frequency: t.frequency, weightage: t.weightage, color: t.color,
         requiresProof: t.requiresProof, groupId: t.groupId, group: t.group,
@@ -130,9 +141,8 @@ async function getMemberTasks(req, res, next) {
       const totalWeight = tasksWithStatus.reduce((sum, t) => sum + t.weightage, 0);
       const completedWeight = tasksWithStatus.filter(t => t.completedToday).reduce((sum, t) => sum + t.weightage, 0);
       const score = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
-      const userXp = await prisma.user.findUnique({ where: { id: m.userId }, select: { totalXp: true } });
-      return { user: m.user, role: m.role, tasks: tasksWithStatus, score, completedCount: tasksWithStatus.filter(t => t.completedToday).length, totalCount: tasksWithStatus.length, totalXp: userXp?.totalXp || 0 };
-    }));
+      return { user: m.user, role: m.role, tasks: tasksWithStatus, score, completedCount: tasksWithStatus.filter(t => t.completedToday).length, totalCount: tasksWithStatus.length, totalXp: xpMap[m.userId] || 0 };
+    });
     memberTasks.sort((a, b) => b.score - a.score);
     res.json({ memberTasks });
   } catch (error) { next(error); }

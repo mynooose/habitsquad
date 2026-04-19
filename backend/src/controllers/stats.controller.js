@@ -205,22 +205,45 @@ async function getRankings(req, res, next) {
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
     const myMemberships = await statsQ.findUserMembershipsWithGroup(req.user.id);
-    const groups = await Promise.all(myMemberships.map(async (mem) => {
-      const members = await prisma.groupMembership.findMany({ where: { groupId: mem.groupId }, include: { user: { select: { id: true, name: true, avatar: true } } } });
-      const memberScores = await Promise.all(members.map(async (m) => {
-        const tasks = await taskQ.findActiveTasksByUserAndGroup(m.userId, mem.groupId);
-        const completions = await statsQ.findCompletionsByUserAndDateRange(m.userId, today, tomorrow);
-        const completedIds = new Set(completions.map(c => c.taskId));
+    if (myMemberships.length === 0) return res.json({ groups: [] });
+
+    const groupIds = myMemberships.map(m => m.groupId);
+    const memberships2 = await prisma.groupMembership.findMany({ where: { groupId: { in: groupIds } }, include: { user: { select: { id: true, name: true } } } });
+    const allUserIds = Array.from(new Set(memberships2.map(m => m.userId)));
+
+    const [tasksList, completionsList] = await Promise.all([
+      prisma.task.findMany({ where: { groupId: { in: groupIds }, userId: { in: allUserIds }, isActive: true } }),
+      prisma.taskCompletion.findMany({ where: { userId: { in: allUserIds }, date: { gte: today, lt: tomorrow } } })
+    ]);
+
+    // Index by (userId, groupId)
+    const tasksByUserGroup = {};
+    tasksList.forEach(t => {
+      const key = `${t.userId}_${t.groupId}`;
+      if (!tasksByUserGroup[key]) tasksByUserGroup[key] = [];
+      tasksByUserGroup[key].push(t);
+    });
+    const completionsByUser = {};
+    completionsList.forEach(c => {
+      if (!completionsByUser[c.userId]) completionsByUser[c.userId] = new Set();
+      completionsByUser[c.userId].add(c.taskId);
+    });
+
+    const groups = myMemberships.map(mem => {
+      const members = memberships2.filter(m => m.groupId === mem.groupId);
+      const memberScores = members.map(m => {
+        const tasks = tasksByUserGroup[`${m.userId}_${mem.groupId}`] || [];
+        const completedIds = completionsByUser[m.userId] || new Set();
         const applicable = getApplicableTasks(tasks, today);
         const weight = applicable.reduce((s, t) => s + t.weightage, 0);
         const completed = computeDayScore(applicable, completedIds);
         return { userId: m.userId, user: m.user, score: weight > 0 ? Math.round((completed / weight) * 100) : 0 };
-      }));
+      });
       memberScores.sort((a, b) => b.score - a.score);
       const myIndex = memberScores.findIndex(m => m.userId === req.user.id);
       const top = memberScores[0];
       return { groupId: mem.groupId, groupName: mem.group.name, groupColor: mem.group.color, myRank: myIndex + 1, totalMembers: memberScores.length, myScore: memberScores[myIndex]?.score || 0, topScore: top?.score || 0, topUser: top?.userId !== req.user.id ? { name: top?.user?.name } : null };
-    }));
+    });
 
     res.json({ groups });
   } catch (error) { next(error); }

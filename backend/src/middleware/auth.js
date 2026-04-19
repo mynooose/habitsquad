@@ -24,9 +24,10 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
+    // Lightweight select — avatar/bio loaded only via /auth/me when needed
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, name: true, avatar: true, dob: true, gender: true, bio: true, totalXp: true, dailyEmailEnabled: true, createdAt: true }
+      select: { id: true, email: true, name: true, totalXp: true, createdAt: true }
     });
 
     if (!user) {
