@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { Target, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -11,44 +13,26 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
+  const router = useRouter();
+  const { checkAuth } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await api.request('/auth/register', { method: 'POST', body: { email, password, name } });
-      setRegistered(true);
+      const data = await api.request('/auth/register', { method: 'POST', body: { email, password, name } });
+      if (data.token) {
+        api.setToken(data.token);
+        await checkAuth();
+        router.push('/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
-
-  if (registered) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-8 h-8 text-green-400" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Check your email</h1>
-          <p className="text-zinc-400 mb-6">
-            We sent a verification link to <span className="text-white font-medium">{email}</span>.
-            Click the link to verify your account.
-          </p>
-          <div className="space-y-3">
-            <Link href="/login" className="block w-full py-3 rounded-xl gradient-brand font-semibold text-center hover:opacity-90">
-              Go to Login
-            </Link>
-            <ResendButton email={email} />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex">
