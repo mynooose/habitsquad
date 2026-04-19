@@ -160,16 +160,27 @@ async function getLeaderboard(req, res, next) {
     if (period === 'week') startDate.setDate(startDate.getDate() - 7);
     else startDate.setMonth(startDate.getMonth() - 1);
 
-    const leaderboard = await Promise.all(members.map(async (m) => {
-      const userTasks = await taskQ.findActiveTasksByUserAndGroup(m.userId, req.params.id);
-      const completions = await prisma.taskCompletion.findMany({ where: { userId: m.userId, date: { gte: startDate, lte: endDate } } });
+    const memberIds = members.map(m => m.userId);
+    const [allTasks, allCompletions] = await Promise.all([
+      prisma.task.findMany({ where: { userId: { in: memberIds }, groupId: req.params.id, isActive: true } }),
+      prisma.taskCompletion.findMany({ where: { userId: { in: memberIds }, date: { gte: startDate, lte: endDate } } })
+    ]);
+
+    const tasksByUser = {};
+    allTasks.forEach(t => { if (!tasksByUser[t.userId]) tasksByUser[t.userId] = []; tasksByUser[t.userId].push(t); });
+    const completionsByUser = {};
+    allCompletions.forEach(c => { if (!completionsByUser[c.userId]) completionsByUser[c.userId] = []; completionsByUser[c.userId].push(c); });
+
+    const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+    const leaderboard = members.map(m => {
+      const userTasks = tasksByUser[m.userId] || [];
+      const completions = completionsByUser[m.userId] || [];
       const totalWeight = userTasks.reduce((sum, t) => sum + t.weightage, 0);
       const completedWeight = completions.reduce((sum, c) => { const task = userTasks.find(t => t.id === c.taskId); return sum + (task?.weightage || 0); }, 0);
-      const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
       const maxWeight = totalWeight * days;
       const avgScore = maxWeight > 0 ? Math.round((completedWeight / maxWeight) * 100) : 0;
       return { user: m.user, role: m.role, score: Math.min(avgScore, 100), completions: completions.length, tasks: userTasks.length };
-    }));
+    });
     leaderboard.sort((a, b) => b.score - a.score);
     const rankedLeaderboard = leaderboard.map((entry, index) => ({ ...entry, rank: index + 1 }));
     res.json({ leaderboard: rankedLeaderboard, period });
