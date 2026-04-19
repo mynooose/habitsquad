@@ -1,11 +1,13 @@
 FROM node:20-alpine
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
-
 COPY prisma ./prisma
+
+RUN npm install --omit=dev --ignore-scripts
 RUN npx prisma generate
 
 COPY src ./src
