@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, TrendingUp, TrendingDown, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Flame, Target, TrendingUp, TrendingDown, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera, X } from 'lucide-react';
 import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS, getLevel } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -15,7 +15,8 @@ export default function DashboardPage() {
   const [rankings, setRankings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(null);
-  const [proofTask, setProofTask] = useState(null); // task requiring photo proof
+  const [proofTask, setProofTask] = useState(null);
+  const [viewProof, setViewProof] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -230,15 +231,28 @@ export default function DashboardPage() {
 
       {/* Personal Tasks */}
       {personalTasks.length > 0 && (
-        <TaskSection title="Personal" tasks={personalTasks} completing={completing} onToggle={handleToggle} />
+        <TaskSection title="Personal" tasks={personalTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
       )}
 
       {/* Group Tasks */}
       {groupedTasks.map(({ group, tasks: gTasks }) => (
-        <TaskSection key={group.id} title={group.name} groupId={group.id} color={group.color} tasks={gTasks} completing={completing} onToggle={handleToggle} />
+        <TaskSection key={group.id} title={group.name} groupId={group.id} color={group.color} tasks={gTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
       ))}
 
-      {/* Photo Proof Modal */}
+      {/* Proof Viewer */}
+      {viewProof && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setViewProof(null)}>
+          <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
+              <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-surface-100" />
+          </div>
+        </div>
+      )}
+
+      {/* Photo Proof Upload Modal */}
       {proofTask && (
         <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />
       )}
@@ -300,7 +314,7 @@ function ProofModal({ task, onClose, onSubmit }) {
   );
 }
 
-function TaskSection({ title, groupId, color, tasks, completing, onToggle }) {
+function TaskSection({ title, groupId, color, tasks, completing, onToggle, onViewProof }) {
   const completedCount = tasks.filter(t => t.completedToday).length;
   const completedPts = tasks.filter(t => t.completedToday).reduce((s, t) => s + t.weightage, 0);
   const totalPts = tasks.reduce((s, t) => s + t.weightage, 0);
@@ -335,9 +349,10 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle }) {
             </div>
             {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
             {task.proofUrl && task.completedToday && (
-              <a href={task.proofUrl} target="_blank" rel="noopener" className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-white/10 hover:border-white/30 transition-colors">
+              <button onClick={() => onViewProof?.({ title: task.title, url: task.proofUrl })}
+                className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-green-500/30 hover:border-green-500/60 transition-colors">
                 <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
-              </a>
+              </button>
             )}
             <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
             <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-surface-200 text-zinc-500')}>{task.weightage}pts</div>

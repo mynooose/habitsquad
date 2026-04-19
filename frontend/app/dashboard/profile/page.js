@@ -146,6 +146,24 @@ export default function ProfilePage() {
       {showAvatars && (
         <div className="mb-6 p-4 rounded-xl bg-surface-100 border border-white/5">
           <p className="text-sm font-medium mb-3">Choose an avatar</p>
+
+          {/* Upload custom photo */}
+          <label className="block mb-4 p-4 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+            <Camera className="w-6 h-6 mx-auto mb-1 text-zinc-500" />
+            <p className="text-sm text-zinc-400">Upload your own photo</p>
+            <p className="text-xs text-zinc-600">JPG, PNG — max 2MB</p>
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+              const reader = new FileReader();
+              reader.onloadend = () => { setAvatar(reader.result); setShowAvatars(false); };
+              reader.readAsDataURL(file);
+            }} className="hidden" />
+          </label>
+
+          {/* Preset avatars */}
+          <p className="text-xs text-zinc-500 mb-2">Or pick a preset</p>
           <div className="grid grid-cols-6 gap-3">
             {AVATARS.map((url, i) => (
               <button key={i} onClick={() => { setAvatar(url); setShowAvatars(false); }}

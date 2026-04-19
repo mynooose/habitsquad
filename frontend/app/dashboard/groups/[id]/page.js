@@ -32,6 +32,7 @@ export default function GroupDetailPage() {
   const [tasks, setTasks] = useState([]);
   const [expandedMembers, setExpandedMembers] = useState({});
   const [proofTask, setProofTask] = useState(null);
+  const [viewProof, setViewProof] = useState(null); // { title, url }
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('habits');
   const [period, setPeriod] = useState('week');
@@ -258,11 +259,12 @@ export default function GroupDetailPage() {
                                   {task.group && <span> &middot; {task.group.name}</span>}
                                 </p>
                               </div>
-                              {task.requiresProof && <Camera className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />}
+                              {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
                               {task.proofUrl && task.completedToday && (
-                                <a href={task.proofUrl} target="_blank" rel="noopener" className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-white/10 hover:border-white/30">
+                                <button onClick={(e) => { e.stopPropagation(); setViewProof({ title: task.title, url: task.proofUrl }); }}
+                                  className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-green-500/30 hover:border-green-500/60 transition-colors">
                                   <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
-                                </a>
+                                </button>
                               )}
                               <div className="px-2 py-0.5 rounded bg-surface-200 text-xs text-zinc-400">{task.weightage}pts</div>
                               {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-surface-200 text-zinc-600 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
@@ -382,8 +384,21 @@ export default function GroupDetailPage() {
       {/* Invite Modal */}
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
 
-      {/* Proof Modal */}
+      {/* Proof Upload Modal */}
       {proofTask && <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />}
+
+      {/* Proof Viewer Modal */}
+      {viewProof && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setViewProof(null)}>
+          <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
+              <button onClick={() => setViewProof(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-surface-100" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
