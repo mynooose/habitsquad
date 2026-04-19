@@ -30,6 +30,7 @@ async function listTasks(req, res, next) {
     const tasksWithStatus = tasks.map(task => ({
       ...task,
       completedToday: task.completions.length > 0,
+      proofUrl: task.completions[0]?.proofUrl || null,
       completions: undefined
     }));
     res.json({ tasks: tasksWithStatus });

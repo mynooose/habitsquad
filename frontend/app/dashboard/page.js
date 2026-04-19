@@ -334,6 +334,11 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle }) {
               <p className="text-xs text-zinc-600">{getFrequencyLabel(task.frequency)}</p>
             </div>
             {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+            {task.proofUrl && task.completedToday && (
+              <a href={task.proofUrl} target="_blank" rel="noopener" className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-white/10 hover:border-white/30 transition-colors">
+                <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
+              </a>
+            )}
             <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
             <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-surface-200 text-zinc-500')}>{task.weightage}pts</div>
           </div>

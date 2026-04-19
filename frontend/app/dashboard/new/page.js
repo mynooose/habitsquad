@@ -34,6 +34,7 @@ export default function NewPage() {
   const [frequency, setFrequency] = useState('DAILY');
   const [weightage, setWeightage] = useState(10);
   const [color, setColor] = useState(TASK_COLORS[0]);
+  const [requiresProof, setRequiresProof] = useState(false);
   const [groupId, setGroupId] = useState(preGroupId || null);
   const [existingTasks, setExistingTasks] = useState([]); // existing tasks in selected group for redistribution
 
@@ -95,7 +96,7 @@ export default function NewPage() {
     setLoading(true);
     setError('');
     try {
-      await api.createTask({ title, frequency, color, groupId, redistribute: true });
+      await api.createTask({ title, frequency, color, groupId, requiresProof, redistribute: true });
       router.push(groupId ? `/dashboard/groups/${groupId}` : '/dashboard');
     } catch (err) {
       setError(err.message);
@@ -118,7 +119,7 @@ export default function NewPage() {
       const { group } = await api.createGroup({ name: groupName, description: groupDesc, color: groupColor });
       // Create all habits for this group with their set weights
       for (const h of validHabits) {
-        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, groupId: group.id });
+        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: group.id });
       }
       // Note: group creation form already handles weight distribution (sum=100), no redistribute needed
       router.push(`/dashboard/groups/${group.id}`);
@@ -153,7 +154,7 @@ export default function NewPage() {
       }
       // Create new habits with their set weights (no redistribute — we already calculated)
       for (const h of newHabits) {
-        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, groupId: preGroupId });
+        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: preGroupId });
       }
       router.push(`/dashboard/groups/${preGroupId}`);
     } catch (err) {
@@ -366,6 +367,20 @@ export default function NewPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-surface-100 border border-white/5">
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-amber-400" />
+              <div>
+                <p className="text-sm font-medium">Requires Photo Proof</p>
+                <p className="text-xs text-zinc-500">Must upload a photo to complete</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setRequiresProof(!requiresProof)}
+              className={cn('w-12 h-7 rounded-full transition-colors relative', requiresProof ? 'bg-amber-500' : 'bg-surface-300')}>
+              <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', requiresProof ? 'translate-x-6' : 'translate-x-1')} />
+            </button>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -586,6 +601,10 @@ export default function NewPage() {
                             </button>
                           ))}
                         </div>
+                        <button type="button" onClick={() => updateSetupHabit(habit.id, 'requiresProof', !habit.requiresProof)}
+                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-surface-200 text-zinc-500 hover:text-white')}>
+                          <Camera className="w-3 h-3" /> Proof
+                        </button>
                         <div className="flex gap-1">
                           {TASK_COLORS.map(c => (
                             <button key={c} type="button" onClick={() => updateSetupHabit(habit.id, 'color', c)}

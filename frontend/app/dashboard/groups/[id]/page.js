@@ -31,6 +31,7 @@ export default function GroupDetailPage() {
   const [memberTasks, setMemberTasks] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [expandedMembers, setExpandedMembers] = useState({});
+  const [proofTask, setProofTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('habits');
   const [period, setPeriod] = useState('week');
@@ -80,19 +81,24 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleToggle = async (task) => {
+  const handleToggle = async (task, proofUrl = null) => {
+    if (!task.completedToday && task.requiresProof && !proofUrl) {
+      setProofTask(task);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completedToday) {
         await api.uncompleteTask(task.id);
       } else {
-        await api.completeTask(task.id);
+        await api.completeTask(task.id, null, proofUrl);
       }
       await fetchData();
     } catch (error) {
       console.error('Failed:', error);
     } finally {
       setCompleting(null);
+      setProofTask(null);
     }
   };
 
@@ -375,6 +381,55 @@ export default function GroupDetailPage() {
 
       {/* Invite Modal */}
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
+
+      {/* Proof Modal */}
+      {proofTask && <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />}
+    </div>
+  );
+}
+
+function ProofModal({ task, onClose, onSubmit }) {
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-surface-100 border border-white/10 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <Camera className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-bold">Photo Proof Required</h2>
+        </div>
+        <p className="text-sm text-zinc-400 mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+        {preview ? (
+          <div className="mb-4">
+            <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-zinc-400 hover:text-white">Change photo</button>
+          </div>
+        ) : (
+          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-500 cursor-pointer text-center transition-colors">
+            <Camera className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+            <p className="text-sm text-zinc-400">Click to upload photo</p>
+            <p className="text-xs text-zinc-600 mt-1">JPG, PNG — max 2MB</p>
+            <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+          </label>
+        )}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-surface-200 font-medium hover:bg-surface-300">Cancel</button>
+          <button onClick={() => { setUploading(true); onSubmit(preview); }} disabled={!preview || uploading}
+            className="flex-1 py-3 rounded-xl gradient-brand font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete with Proof'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
