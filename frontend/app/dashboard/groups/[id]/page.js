@@ -314,7 +314,7 @@ export default function GroupDetailPage() {
                     <p className="font-medium">{entry.user.name} {isMe && <span className="text-zinc-500">(You)</span>}</p>
                     <p className="text-xs text-zinc-500">{entry.completions} completions</p>
                   </div>
-                  <div className={cn('text-2xl font-bold', i === 0 ? 'text-yellow-500' : i === 1 ? 'text-zinc-400' : i === 2 ? 'text-amber-600' : 'text-white')}>{entry.score}%</div>
+                  <div className={cn('text-2xl font-bold', i === 0 ? 'text-yellow-500' : i === 1 ? 'text-zinc-400' : i === 2 ? 'text-amber-600' : 'text-primary')}>{entry.score}%</div>
                 </div>
               );
             })}

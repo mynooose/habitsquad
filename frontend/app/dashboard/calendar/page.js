@@ -274,7 +274,7 @@ function CalendarTask({ task, canToggle, completing, onToggle }) {
       )}
       <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-white')}>{t.title}</p>
+        <p className={cn('text-sm truncate', t.completed ? 'text-zinc-400 line-through' : 'text-primary')}>{t.title}</p>
         <p className="text-xs text-zinc-600">{getFrequencyLabel(t.frequency)}</p>
       </div>
       {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
