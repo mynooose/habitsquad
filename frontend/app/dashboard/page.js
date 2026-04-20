@@ -274,7 +274,7 @@ function ProofModal({ task, onClose, onSubmit }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
+    if (file.size > 20 * 1024 * 1024) { alert('Image must be under 20MB'); return; }
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result);
     reader.readAsDataURL(file);
@@ -313,7 +313,7 @@ function ProofModal({ task, onClose, onSubmit }) {
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
             <p className="text-sm text-muted">Click to upload photo</p>
-            <p className="text-xs text-muted mt-1">JPG, PNG — max 5MB</p>
+            <p className="text-xs text-muted mt-1">JPG, PNG — max 20MB</p>
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
         )}

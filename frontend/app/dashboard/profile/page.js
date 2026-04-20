@@ -151,11 +151,11 @@ export default function ProfilePage() {
           <label className="block mb-4 p-4 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
             <Camera className="w-6 h-6 mx-auto mb-1 text-muted" />
             <p className="text-sm text-muted">Upload your own photo</p>
-            <p className="text-xs text-muted">JPG, PNG — max 2MB</p>
+            <p className="text-xs text-muted">JPG, PNG — max 20MB</p>
             <input type="file" accept="image/*" onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return; }
+              if (file.size > 20 * 1024 * 1024) { setError('Image must be under 20MB'); return; }
               const reader = new FileReader();
               reader.onloadend = async () => {
                 try {

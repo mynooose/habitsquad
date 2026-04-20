@@ -32,8 +32,8 @@ async function uploadDataUrl(dataUrl, prefix = 'uploads') {
   const mimeType = match[1];
   const buffer = Buffer.from(match[2], 'base64');
 
-  if (buffer.length > 5 * 1024 * 1024) {
-    throw new Error('Image too large (max 5MB)');
+  if (buffer.length > 20 * 1024 * 1024) {
+    throw new Error('Image too large (max 20MB)');
   }
 
   return uploadBuffer(buffer, mimeType, prefix);
