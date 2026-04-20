@@ -127,8 +127,11 @@ async function login(req, res, next) {
   }
 }
 
-async function getMe(req, res) {
-  res.json({ user: req.user });
+async function getMe(req, res, next) {
+  try {
+    const user = await authQueries.findUserById(req.user.id);
+    res.json({ user });
+  } catch (error) { next(error); }
 }
 
 async function updateMe(req, res, next) {
