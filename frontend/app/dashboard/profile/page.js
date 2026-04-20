@@ -6,7 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X } from 'lucide-react';
-import { getLevel } from '@/lib/utils';
+import { getLevel, LEVELS } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   const [dailyEmail, setDailyEmail] = useState(false);
   const [showAvatars, setShowAvatars] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
   const [originalData, setOriginalData] = useState(null);
 
   useEffect(() => {
@@ -175,6 +176,30 @@ export default function ProfilePage() {
                 <div className="h-full rounded-full bg-yellow-500 transition-all" style={{ width: `${lvl.progress}%` }} />
               </div>
               <p className="text-xs text-muted mt-1">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to next level` : 'Max level!'}</p>
+              <button type="button" onClick={() => setShowLevels(v => !v)} className="mt-3 text-xs text-brand-500 hover:underline">
+                {showLevels ? 'Hide levels' : 'View all levels'}
+              </button>
+              {showLevels && (
+                <div className="mt-3 pt-3 border-t border-[var(--card-border)] space-y-1.5">
+                  {LEVELS.map(l => {
+                    const isCurrent = l.level === lvl.level;
+                    const isUnlocked = (user?.totalXp || 0) >= l.xp;
+                    return (
+                      <div key={l.level} className={cn('flex items-center justify-between text-xs py-1 px-2 rounded-lg', isCurrent && 'bg-yellow-500/10')}>
+                        <div className="flex items-center gap-2">
+                          <span className={cn('w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px]', isUnlocked ? 'bg-yellow-500/20 text-yellow-400' : 'bg-[var(--card-bg-hover)] text-muted')}>
+                            {l.level}
+                          </span>
+                          <span className={cn('font-medium', isUnlocked ? l.color : 'text-muted')}>{l.name}</span>
+                          {isCurrent && <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">You</span>}
+                        </div>
+                        <span className={cn('tabular-nums', isUnlocked ? 'text-primary' : 'text-muted')}>{l.xp} XP</span>
+                      </div>
+                    );
+                  })}
+                  <p className="text-[11px] text-muted pt-2">Complete a task to earn XP equal to its weightage.</p>
+                </div>
+              )}
             </div>
           );
         })()}
