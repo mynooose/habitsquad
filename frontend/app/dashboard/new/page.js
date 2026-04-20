@@ -12,7 +12,7 @@ const DEFAULT_HABIT = () => ({
   title: '',
   frequency: 'DAILY',
   weightage: 100,
-  requiresProof: false,
+  requiresProof: true,
   color: TASK_COLORS[Math.floor(Math.random() * TASK_COLORS.length)],
 });
 
@@ -34,7 +34,7 @@ export default function NewPage() {
   const [frequency, setFrequency] = useState('DAILY');
   const [weightage, setWeightage] = useState(10);
   const [color, setColor] = useState(TASK_COLORS[0]);
-  const [requiresProof, setRequiresProof] = useState(false);
+  const [requiresProof, setRequiresProof] = useState(true);
   const [groupId, setGroupId] = useState(preGroupId || null);
   const [existingTasks, setExistingTasks] = useState([]); // existing tasks in selected group for redistribution
 

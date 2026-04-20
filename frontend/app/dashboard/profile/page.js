@@ -297,7 +297,7 @@ export default function ProfilePage() {
             <p className="text-sm text-muted">Get your planned tasks emailed every day at 7:00 AM</p>
           </div>
           <button type="button" disabled={!isEditing} onClick={() => setDailyEmail(!dailyEmail)}
-            className={cn('w-12 h-7 rounded-full transition-colors relative disabled:opacity-60', dailyEmail ? 'bg-brand-500' : 'bg-[var(--card-bg-hover)]')}>
+            className={cn('w-12 h-7 rounded-full transition-colors relative disabled:opacity-60', dailyEmail ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10')}>
             <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
           </button>
         </div>

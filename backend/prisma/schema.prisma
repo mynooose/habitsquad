@@ -59,7 +59,7 @@ model Task {
   frequency   TaskFrequency @default(DAILY)
   weightage   Int           @default(5)
   isActive      Boolean       @default(true)
-  requiresProof Boolean       @default(false)
+  requiresProof Boolean       @default(true)
   color         String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
