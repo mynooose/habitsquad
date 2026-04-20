@@ -1,10 +1,11 @@
 function getApplicableTasks(tasks, date) {
-  const dayOfWeek = date.getDay();
+  const dayOfWeek = date.getUTCDay();
+  const dateUtcMidnight = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 
   return tasks.filter(task => {
-    const createdDate = new Date(task.createdAt);
-    createdDate.setHours(0, 0, 0, 0);
-    if (createdDate > date) return false;
+    const c = new Date(task.createdAt);
+    const createdUtcMidnight = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate()));
+    if (createdUtcMidnight > dateUtcMidnight) return false;
 
     switch (task.frequency) {
       case 'DAILY': return true;
@@ -29,11 +30,18 @@ function computeDayPercent(applicableTasks, completedTaskIds) {
   return totalWeight > 0 ? Math.round((completed / totalWeight) * 100) : 0;
 }
 
-function getTodayRange() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getTodayRange(dateKey) {
+  // If dateKey provided (YYYY-MM-DD), use that; else UTC today
+  let today;
+  if (dateKey && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    today = new Date(Date.UTC(y, m - 1, d));
+  } else {
+    today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+  }
   const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   return { today, tomorrow };
 }
 

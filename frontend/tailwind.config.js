@@ -37,6 +37,7 @@ module.exports = {
         'slide-up': 'slideUp 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'slide-in-left': 'slideInLeft 0.25s ease-out',
+        'slide-in-right': 'slideInRight 0.25s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -53,6 +54,10 @@ module.exports = {
         },
         slideInLeft: {
           '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)' },
           '100%': { transform: 'translateX(0)' },
         },
       },

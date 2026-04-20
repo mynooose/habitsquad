@@ -9,6 +9,7 @@ const statsRoutes = require('./routes/stats');
 const groupRoutes = require('./routes/groups');
 const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
+const notificationRoutes = require('./routes/notifications');
 const { startDailyEmailCron } = require('./utils/dailyEmail');
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {

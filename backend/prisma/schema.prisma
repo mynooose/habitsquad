@@ -20,6 +20,7 @@ model User {
   dailyEmailEnabled Boolean  @default(false)
   emailVerified     Boolean  @default(false)
   verifyToken       String?  @unique
+  timezone          String   @default("UTC")
   createdAt         DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -28,8 +29,27 @@ model User {
   memberships GroupMembership[]
   createdGroups Group[]
   sentInvites   GroupInvite[]    @relation("InviteSender")
+  notifications Notification[]
 
   @@map("users")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // GROUP_ADDED, GROUP_INVITE, GENERAL
+  title     String
+  message   String   @db.Text
+  relatedId String?  // group id, task id, etc.
+  actionUrl String?  // url to navigate on click
+  read      Boolean  @default(false)
+  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, DISMISSED
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 model Task {

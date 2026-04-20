@@ -22,6 +22,8 @@ async function uploadBuffer(buffer, mimeType = 'image/jpeg', prefix = 'uploads')
     resumable: false,
   });
 
+  try { await file.makePublic(); } catch (e) { console.warn('makePublic failed:', e.message); }
+
   return `https://storage.googleapis.com/${BUCKET_NAME}/${filename}`;
 }
 

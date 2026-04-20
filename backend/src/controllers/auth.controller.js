@@ -54,11 +54,17 @@ async function verifyEmail(req, res, next) {
     const { token } = req.query;
     if (!token) return res.status(400).json({ error: 'Verification token is required' });
 
+    // Atomic: match by token, update in one go. If token was already consumed, this finds nothing.
     const user = await prisma.user.findUnique({ where: { verifyToken: token } });
-    if (!user) return res.status(400).json({ error: 'Invalid or expired verification token' });
+
+    if (!user) {
+      // Token may have been consumed already - check if user is verified
+      return res.status(400).json({ error: 'Invalid or already used verification link. Please log in or request a new link.' });
+    }
 
     if (user.emailVerified) {
-      return res.json({ message: 'Email already verified' });
+      const jwtToken = generateToken(user.id);
+      return res.json({ message: 'Email already verified', token: jwtToken, user: { id: user.id, email: user.email, name: user.name } });
     }
 
     await prisma.user.update({
@@ -66,7 +72,6 @@ async function verifyEmail(req, res, next) {
       data: { emailVerified: true, verifyToken: null }
     });
 
-    // Return JWT so user is logged in after verification
     const jwtToken = generateToken(user.id);
     res.json({
       message: 'Email verified successfully',

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Flame, Zap, Menu, X, Sun, Moon, User } from 'lucide-react';
+import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Flame, Zap, Menu, X, Sun, Moon, User, Bell, Check, CheckCheck } from 'lucide-react';
 import { cn, getLevel } from '@/lib/utils';
 
 const navItems = [
@@ -30,6 +30,17 @@ export default function DashboardLayout({ children }) {
   const [groups, setGroups] = useState([]);
   const [streak, setStreak] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const { notifications: n, unreadCount: u } = await api.getNotifications();
+      setNotifications(n || []);
+      setUnreadCount(u || 0);
+    } catch {}
+  };
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.push('/login');
@@ -39,6 +50,9 @@ export default function DashboardLayout({ children }) {
     if (isAuthenticated) {
       api.getGroups().then(res => setGroups(res.groups || [])).catch(() => {});
       api.getStreak().then(res => setStreak(res.currentStreak || 0)).catch(() => {});
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 60000); // poll every minute
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
@@ -65,9 +79,17 @@ export default function DashboardLayout({ children }) {
           </div>
           <span className="font-bold text-lg text-primary">HabitSquad</span>
         </Link>
-        <button onClick={toggleTheme} className="p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setShowNotifications(true)} className="relative p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-[var(--sidebar-bg)]" />
+            )}
+          </button>
+          <button onClick={toggleTheme} className="p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {/* User card */}
@@ -168,9 +190,15 @@ export default function DashboardLayout({ children }) {
           </div>
           <span className="font-bold text-primary">HabitSquad</span>
         </Link>
-        <button onClick={toggleTheme} className="p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted">
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setShowNotifications(true)} className="relative p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted">
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />}
+          </button>
+          <button onClick={toggleTheme} className="p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted">
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile sidebar overlay */}
@@ -195,6 +223,80 @@ export default function DashboardLayout({ children }) {
       <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 min-h-screen overflow-auto">
         {children}
       </main>
+
+      {/* Notifications drawer */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowNotifications(false)} />
+          <aside className="absolute right-0 top-0 bottom-0 w-full sm:w-96 glass-sidebar flex flex-col animate-slide-in-right">
+            <div className="h-16 px-5 flex items-center justify-between border-b border-[var(--card-border)]">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-brand-500" />
+                <span className="font-bold">Notifications</span>
+                {unreadCount > 0 && <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 text-xs font-bold">{unreadCount}</span>}
+              </div>
+              <div className="flex items-center gap-1">
+                {unreadCount > 0 && (
+                  <button onClick={async () => { await api.markAllNotificationsRead(); fetchNotifications(); }}
+                    className="p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted hover:text-primary" title="Mark all read">
+                    <CheckCheck className="w-4 h-4" />
+                  </button>
+                )}
+                <button onClick={() => setShowNotifications(false)} className="p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {notifications.length === 0 ? (
+                <div className="text-center py-16">
+                  <Bell className="w-10 h-10 mx-auto mb-3 text-muted opacity-40" />
+                  <p className="text-muted text-sm">No notifications yet</p>
+                </div>
+              ) : notifications.map(n => (
+                <div key={n.id} className={cn('p-4 rounded-2xl glass-card', !n.read && 'ring-1 ring-brand-500/30')}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{n.title}</p>
+                      <p className="text-xs text-muted mt-0.5">{n.message}</p>
+                      <p className="text-xs text-muted mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+
+                      {n.type === 'GROUP_ADDED' && n.status === 'PENDING' && (
+                        <div className="flex gap-2 mt-3">
+                          <button onClick={async () => {
+                            await api.respondToNotification(n.id, 'accept');
+                            fetchNotifications();
+                            if (n.actionUrl) router.push(n.actionUrl);
+                            setShowNotifications(false);
+                          }} className="flex-1 py-1.5 rounded-lg btn-primary text-xs font-semibold flex items-center justify-center gap-1">
+                            <Check className="w-3 h-3" /> Accept
+                          </button>
+                          <button onClick={async () => {
+                            await api.respondToNotification(n.id, 'decline');
+                            fetchNotifications();
+                          }} className="flex-1 py-1.5 rounded-lg bg-[var(--card-bg-hover)] text-xs font-semibold text-muted hover:text-primary">
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                      {n.status === 'ACCEPTED' && <p className="text-xs text-green-500 mt-2 font-medium">✓ Accepted</p>}
+                      {n.status === 'DECLINED' && <p className="text-xs text-red-500 mt-2 font-medium">✗ Declined</p>}
+                    </div>
+                    {!n.read && (
+                      <button onClick={async () => { await api.markNotificationRead(n.id); fetchNotifications(); }}
+                        className="text-xs text-brand-500 hover:underline flex-shrink-0">Mark read</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Mobile bottom tabs */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-sidebar border-t border-[var(--card-border)]">

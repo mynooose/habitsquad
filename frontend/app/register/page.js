@@ -36,7 +36,7 @@ export default function RegisterPage() {
           </div>
           <h1 className="text-3xl font-bold mb-2">Check your email</h1>
           <p className="text-muted mb-8">
-            We sent a verification link to <span className="text-white font-medium">{email}</span>. Click the link to activate your account.
+            We sent a verification link to <span className="text-primary font-medium">{email}</span>. Click the link to activate your account.
           </p>
           <ResendButton email={email} />
           <p className="mt-6 text-sm text-muted">

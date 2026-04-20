@@ -250,7 +250,7 @@ export default function NewPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Link href={preGroupId ? `/dashboard/groups/${preGroupId}` : '/dashboard'} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href={preGroupId ? `/dashboard/groups/${preGroupId}` : '/dashboard'} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
         <div>
           <h1 className="text-2xl font-bold">{preGroupId ? 'Add Habits' : 'Add New'}</h1>
           <p className="text-muted text-sm">{preGroupId ? `Add habits to ${setupGroupName || 'group'}` : 'Create a habit or group'}</p>
@@ -282,7 +282,7 @@ export default function NewPage() {
       {/* Single Habit Form */}
       {mode === 'habit' && (
         <div className="space-y-6">
-          <button onClick={() => setMode(null)} className="flex items-center gap-2 text-sm text-muted hover:text-white"><ArrowLeft className="w-4 h-4" /> Back</button>
+          <button onClick={() => setMode(null)} className="flex items-center gap-2 text-sm text-muted hover:text-primary"><ArrowLeft className="w-4 h-4" /> Back</button>
 
           {/* Weight redistribution preview */}
           <div className="p-4 rounded-xl glass-card">
@@ -322,18 +322,18 @@ export default function NewPage() {
             <label className="block text-sm font-medium mb-2">Group (optional)</label>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setGroupId(null)}
-                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', groupId === null ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
+                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', groupId === null ? 'bg-brand-500/15 text-brand-500 ring-1 ring-brand-500/30' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
                 <Target className="w-4 h-4" /> Personal
               </button>
               {groups.map(g => (
                 <button key={g.id} type="button" onClick={() => setGroupId(g.id)}
-                  className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-muted hover:text-white')}
+                  className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}
                   style={groupId === g.id ? { backgroundColor: (g.color || '#8b5cf6') + '20', color: g.color || '#8b5cf6', borderColor: g.color } : {}}>
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: g.color || '#8b5cf6' }} />
                   {g.name}
                 </button>
               ))}
-              <button type="button" onClick={() => setMode('group')} className="px-3 py-2 rounded-lg text-sm font-medium bg-[var(--card-bg)] text-muted hover:text-white flex items-center gap-2">
+              <button type="button" onClick={() => setMode('group')} className="px-3 py-2 rounded-lg text-sm font-medium bg-[var(--card-bg)] text-muted hover:text-primary flex items-center gap-2">
                 + New Group
               </button>
             </div>
@@ -350,7 +350,7 @@ export default function NewPage() {
             <div className="flex flex-wrap gap-2">
               {FREQUENCIES.map(f => (
                 <button key={f.value} type="button" onClick={() => setFrequency(f.value)}
-                  className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
+                  className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
                   {f.label}
                 </button>
               ))}
@@ -384,7 +384,7 @@ export default function NewPage() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-white font-medium text-center hover:bg-[var(--card-bg-hover)]">Cancel</Link>
+            <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-primary font-medium text-center hover:bg-[var(--card-bg-hover)]">Cancel</Link>
             <button onClick={handleCreateHabit} disabled={loading || !title}
               className="flex-1 py-3 rounded-xl gradient-brand text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Habit'}
@@ -396,7 +396,7 @@ export default function NewPage() {
       {/* Group Form with Multi-Habit Builder */}
       {mode === 'group' && (
         <div className="space-y-6">
-          <button onClick={() => setMode(null)} className="flex items-center gap-2 text-sm text-muted hover:text-white"><ArrowLeft className="w-4 h-4" /> Back</button>
+          <button onClick={() => setMode(null)} className="flex items-center gap-2 text-sm text-muted hover:text-primary"><ArrowLeft className="w-4 h-4" /> Back</button>
 
           {/* Group details */}
           <div className="p-5 rounded-xl glass-card space-y-4">
@@ -451,11 +451,11 @@ export default function NewPage() {
               <h3 className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-green-400" /> Group Habits</h3>
               <div className="flex gap-2">
                 <button onClick={resetEqual}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-white transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-primary transition-colors">
                   <RotateCcw className="w-3.5 h-3.5" /> Equal
                 </button>
                 <button onClick={addHabit}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-white transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-primary transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Add
                 </button>
               </div>
@@ -487,13 +487,13 @@ export default function NewPage() {
                       <div className="flex gap-1 flex-1 flex-wrap">
                         {FREQUENCIES.map(f => (
                           <button key={f.value} type="button" onClick={() => updateHabit(habit.id, 'frequency', f.value)}
-                            className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-white')}>
+                            className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
                             {f.label}
                           </button>
                         ))}
                       </div>
                       <button type="button" onClick={() => updateHabit(habit.id, 'requiresProof', !habit.requiresProof)}
-                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-white')}>
+                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
                         <Camera className="w-3 h-3" /> Proof
                       </button>
                       <div className="flex gap-1">
@@ -517,7 +517,7 @@ export default function NewPage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setMode(null)} className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-white font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
+            <button onClick={() => setMode(null)} className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-primary font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
             <button onClick={handleCreateGroup}
               disabled={loading || !groupName || groupTotalWeight > 100 || groupHabits.every(h => !h.title.trim())}
               className="flex-1 py-3 rounded-xl gradient-accent text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
@@ -557,11 +557,11 @@ export default function NewPage() {
               <h3 className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-green-400" /> Your Habits</h3>
               <div className="flex gap-2">
                 <button onClick={resetSetupEqual}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-white transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-primary transition-colors">
                   <RotateCcw className="w-3.5 h-3.5" /> Equal
                 </button>
                 <button onClick={addSetupHabit}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-white transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] text-sm text-muted hover:text-primary transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Add
                 </button>
               </div>
@@ -596,13 +596,13 @@ export default function NewPage() {
                         <div className="flex gap-1 flex-1 flex-wrap">
                           {FREQUENCIES.map(f => (
                             <button key={f.value} type="button" onClick={() => updateSetupHabit(habit.id, 'frequency', f.value)}
-                              className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-white')}>
+                              className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
                               {f.label}
                             </button>
                           ))}
                         </div>
                         <button type="button" onClick={() => updateSetupHabit(habit.id, 'requiresProof', !habit.requiresProof)}
-                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-white')}>
+                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
                           <Camera className="w-3 h-3" /> Proof
                         </button>
                         <div className="flex gap-1">
@@ -626,7 +626,7 @@ export default function NewPage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button onClick={() => router.push(`/dashboard/groups/${preGroupId}`)} className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-white font-medium hover:bg-[var(--card-bg-hover)]">Back to Group</button>
+            <button onClick={() => router.push(`/dashboard/groups/${preGroupId}`)} className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-primary font-medium hover:bg-[var(--card-bg-hover)]">Back to Group</button>
             <button onClick={handleSetupHabits}
               disabled={loading || setupTotalWeight > 100 || setupHabits.every(h => !h.title.trim())}
               className="flex-1 py-3 rounded-xl gradient-brand text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">

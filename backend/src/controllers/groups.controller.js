@@ -61,13 +61,38 @@ async function inviteToGroup(req, res, next) {
     const membership = await groupQ.findMembership(req.user.id, req.params.id);
     if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
 
+    // Helper to notify + email an existing user added to group
+    const notifyAddedUser = async (userId, userEmail) => {
+      const [group, inviter] = await Promise.all([
+        prisma.group.findUnique({ where: { id: req.params.id }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
+      ]);
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: 'GROUP_ADDED',
+          title: `Added to ${group.name}`,
+          message: `${inviter.name} added you to the group "${group.name}". Accept to join or decline.`,
+          relatedId: req.params.id,
+          actionUrl: `/dashboard/groups/${req.params.id}`,
+          status: 'PENDING'
+        }
+      });
+      if (userEmail) {
+        sendGroupInviteEmail({ to: userEmail, inviterName: inviter.name, groupName: group.name, inviteCode: 'N/A - You were added directly' })
+          .catch(err => console.error('Email failed:', err.message));
+      }
+    };
+
     if (data.userId) {
       const targetUser = await groupQ.findUserById(data.userId);
       if (!targetUser) return res.status(404).json({ error: 'User not found' });
       const existingMembership = await groupQ.findMembership(data.userId, req.params.id);
       if (existingMembership) return res.status(400).json({ error: 'User is already a member' });
       await groupQ.createMembership(data.userId, req.params.id);
-      return res.json({ success: true, message: 'User added to group' });
+      res.json({ success: true, message: 'User added to group' });
+      notifyAddedUser(data.userId, targetUser.email).catch(err => console.error('Notify failed:', err.message));
+      return;
     }
 
     if (data.email) {
@@ -76,7 +101,9 @@ async function inviteToGroup(req, res, next) {
         const existingMembership = await groupQ.findMembership(existingUser.id, req.params.id);
         if (existingMembership) return res.status(400).json({ error: 'User is already a member' });
         await groupQ.createMembership(existingUser.id, req.params.id);
-        return res.json({ success: true, message: 'User added to group' });
+        res.json({ success: true, message: 'User added to group' });
+        notifyAddedUser(existingUser.id, data.email).catch(err => console.error('Notify failed:', err.message));
+        return;
       }
       const existingInvite = await groupQ.findPendingInvite(req.params.id, data.email);
       if (existingInvite && existingInvite.status === 'PENDING') return res.status(400).json({ error: 'Invite already sent to this email' });

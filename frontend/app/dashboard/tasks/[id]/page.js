@@ -98,7 +98,7 @@ export default function EditTaskPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Edit Habit</h1>
           <p className="text-muted text-sm">Update habit settings</p>
@@ -163,12 +163,12 @@ export default function EditTaskPage() {
           <label className="block text-sm font-medium mb-2">Group</label>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setGroupId(null)}
-              className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === null ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
+              className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === null ? 'bg-brand-500/15 text-brand-500 ring-1 ring-brand-500/30' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
               Personal
             </button>
             {groups.map(g => (
               <button key={g.id} type="button" onClick={() => setGroupId(g.id)}
-                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-muted hover:text-white')}
+                className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', groupId === g.id ? 'ring-1' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}
                 style={groupId === g.id ? { backgroundColor: (g.color || '#8b5cf6') + '20', color: g.color } : {}}>
                 {g.name}
               </button>
@@ -187,7 +187,7 @@ export default function EditTaskPage() {
           <div className="flex flex-wrap gap-2">
             {FREQUENCIES.map(f => (
               <button key={f.value} type="button" onClick={() => setFrequency(f.value)}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
+                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
                 {f.label}
               </button>
             ))}
@@ -213,7 +213,7 @@ export default function EditTaskPage() {
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-white font-medium text-center hover:bg-[var(--card-bg-hover)]">Cancel</Link>
+          <Link href="/dashboard" className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-primary font-medium text-center hover:bg-[var(--card-bg-hover)]">Cancel</Link>
           <button onClick={handleSave} disabled={saving || !title}
             className="flex-1 py-3 rounded-xl gradient-brand text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50">
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Changes'}

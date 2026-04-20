@@ -204,7 +204,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-2">
             {rankings.groups.map(g => (
-              <Link key={g.groupId} href={`/dashboard/groups/${g.groupId}`} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors group">
+              <Link key={g.groupId} href={`/dashboard/groups/${g.groupId}`} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors group">
                 <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black', g.myRank === 1 ? 'bg-yellow-500/20 text-yellow-400' : g.myRank === 2 ? 'bg-zinc-400/20 text-muted' : g.myRank === 3 ? 'bg-amber-600/20 text-amber-500' : 'bg-[var(--card-bg-hover)] text-muted')}>
                   #{g.myRank}
                 </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
           <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
-              <button onClick={() => setViewProof(null)} className="text-muted hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setViewProof(null)} className="text-muted hover:text-primary"><X className="w-5 h-5" /></button>
             </div>
             <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
@@ -307,7 +307,7 @@ function ProofModal({ task, onClose, onSubmit }) {
         {preview ? (
           <div className="mb-4">
             <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-primary">Change photo</button>
           </div>
         ) : (
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
@@ -370,7 +370,7 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
                 <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
               </button>
             )}
-            <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-white/5 text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
+            <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
             <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-[var(--card-bg-hover)] text-muted')}>{task.weightage}pts</div>
           </div>
         ))}

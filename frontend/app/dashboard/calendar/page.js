@@ -213,7 +213,7 @@ export default function CalendarPage() {
               <Camera className="w-5 h-5 text-amber-400" />
               <h2 className="text-lg font-bold">Photo Proof Required</h2>
             </div>
-            <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{proofTask.title}"</span></p>
+            <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-primary font-medium">"{proofTask.title}"</span></p>
             <ProofUpload onSubmit={(url) => handleToggle(proofTask, url)} onCancel={() => setProofTask(null)} />
           </div>
         </div>
@@ -238,7 +238,7 @@ function ProofUpload({ onSubmit, onCancel }) {
       {preview ? (
         <div className="mb-4">
           <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-          <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
+          <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-primary">Change photo</button>
         </div>
       ) : (
         <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
@@ -272,7 +272,7 @@ function ProofUpload({ onSubmit, onCancel }) {
 function CalendarTask({ task, canToggle, completing, onToggle }) {
   const t = task;
   return (
-    <div className={cn('flex items-center gap-2.5 p-2.5 rounded-lg transition-colors', t.completed ? 'bg-green-500/5' : 'hover:bg-white/5')}>
+    <div className={cn('flex items-center gap-2.5 p-2.5 rounded-lg transition-colors', t.completed ? 'bg-green-500/5' : 'hover:bg-[var(--card-bg-hover)]')}>
       {canToggle ? (
         <button onClick={() => onToggle(t)} disabled={completing === t.id} className="flex-shrink-0">
           {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted hover:text-green-400 transition-colors" />}

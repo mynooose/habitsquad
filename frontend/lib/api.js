@@ -76,6 +76,22 @@ class ApiClient {
     this.setToken(null);
   }
 
+  async getNotifications() {
+    return this.request('/notifications');
+  }
+
+  async markNotificationRead(id) {
+    return this.request(`/notifications/${id}/read`, { method: 'POST' });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/read-all', { method: 'POST' });
+  }
+
+  async respondToNotification(id, action) {
+    return this.request(`/notifications/${id}/respond`, { method: 'POST', body: { action } });
+  }
+
   async uploadImage(dataUrl, prefix = 'uploads') {
     return this.request('/upload', { method: 'POST', body: { dataUrl, prefix } });
   }
@@ -86,6 +102,7 @@ class ApiClient {
 
   // Tasks
   async getTasks(params = {}) {
+    if (!params.date) params.date = this.getLocalDateKey();
     const query = new URLSearchParams(params).toString();
     return this.request(`/tasks${query ? `?${query}` : ''}`);
   }
@@ -107,11 +124,19 @@ class ApiClient {
   }
 
   async completeTask(id, date = null, proofUrl = null) {
-    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date, proofUrl } });
+    // Always send user's local date (YYYY-MM-DD) so server doesn't guess
+    const localDate = date || this.getLocalDateKey();
+    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date: localDate, proofUrl } });
+  }
+
+  getLocalDateKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   async uncompleteTask(id, date = null) {
-    const query = date ? `?date=${date}` : '';
+    const localDate = date || this.getLocalDateKey();
+    const query = `?date=${localDate}`;
     return this.request(`/tasks/${id}/complete${query}`, { method: 'DELETE' });
   }
 
@@ -169,7 +194,7 @@ class ApiClient {
   }
 
   async getDashboardStats() {
-    return this.request('/stats/dashboard');
+    return this.request(`/stats/dashboard?date=${this.getLocalDateKey()}`);
   }
 
   async getDashboardRankings() {

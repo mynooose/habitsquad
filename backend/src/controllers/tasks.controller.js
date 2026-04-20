@@ -18,7 +18,7 @@ async function getBudget(req, res, next) {
 
 async function listTasks(req, res, next) {
   try {
-    const { active, groupId } = req.query;
+    const { active, groupId, date } = req.query;
     const where = {
       userId: req.user.id,
       ...(active !== undefined && { isActive: active === 'true' }),
@@ -26,7 +26,7 @@ async function listTasks(req, res, next) {
     if (groupId === 'personal') where.groupId = null;
     else if (groupId) where.groupId = groupId;
 
-    const tasks = await taskQ.findTasks(where, getTodayRange());
+    const tasks = await taskQ.findTasks(where, getTodayRange(date));
     const tasksWithStatus = tasks.map(task => ({
       ...task,
       completedToday: task.completions.length > 0,
@@ -140,11 +140,24 @@ async function deleteTask(req, res, next) {
   }
 }
 
+// Parse a YYYY-MM-DD string as UTC midnight for stable date-only storage
+function parseDateKey(key) {
+  if (!key) return null;
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 async function completeTask(req, res, next) {
   try {
     const { date, notes, proofUrl } = req.body;
-    const targetDate = date ? new Date(date) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    // Expect date as YYYY-MM-DD string from client; if missing, use UTC today
+    let targetDate;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      targetDate = parseDateKey(date);
+    } else {
+      targetDate = new Date();
+      targetDate.setUTCHours(0, 0, 0, 0);
+    }
 
     // Parallel: fetch task + check existing completion
     const [task, existing] = await Promise.all([
@@ -173,8 +186,13 @@ async function completeTask(req, res, next) {
 async function uncompleteTask(req, res, next) {
   try {
     const { date } = req.query;
-    const targetDate = date ? new Date(date) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    let targetDate;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      targetDate = parseDateKey(date);
+    } else {
+      targetDate = new Date();
+      targetDate.setUTCHours(0, 0, 0, 0);
+    }
 
     // Parallel: fetch completion + task
     const [completion, task] = await Promise.all([

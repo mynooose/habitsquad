@@ -136,7 +136,7 @@ export default function GroupDetailPage() {
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function GroupDetailPage() {
       <div className="flex gap-2 mb-6">
         {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-white/10 text-white' : 'text-muted hover:text-white hover:bg-[var(--card-bg)]')}>
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -204,7 +204,7 @@ export default function GroupDetailPage() {
                     isShamed ? 'bg-red-500/8 border-red-500/25' :
                     cn(mColor.bg, mColor.border))}>
                     {/* Member Header */}
-                    <button onClick={() => toggleMember(member.user.id)} className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
+                    <button onClick={() => toggleMember(member.user.id)} className="w-full flex items-center gap-4 p-4 hover:bg-[var(--card-bg-hover)] transition-colors">
                       <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
                         isPerfect ? 'bg-green-500/25 text-green-400' :
                         isShamed ? 'bg-red-500/20 text-red-400' :
@@ -215,7 +215,7 @@ export default function GroupDetailPage() {
                         <p className="font-medium flex items-center gap-1.5">
                           {member.user.name} {isMe && <span className="text-muted">(You)</span>}
                           {member.role === 'ADMIN' && <span className="ml-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">Admin</span>}
-                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-white/5')}>Lv.{lvl.level}</span>
+                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-[var(--card-bg)]')}>Lv.{lvl.level}</span>
                         </p>
                         <p className="text-xs text-muted">
                           {noActivity ? <span className="text-red-400 font-medium">No activity today</span> :
@@ -240,7 +240,7 @@ export default function GroupDetailPage() {
                         </div>
                         <div className="p-2">
                           {member.tasks.map(task => (
-                            <div key={task.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg', task.completedToday ? 'bg-green-500/5' : 'hover:bg-white/5')}>
+                            <div key={task.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg', task.completedToday ? 'bg-green-500/5' : 'hover:bg-[var(--card-bg-hover)]')}>
                               {/* If it's my task, make it toggleable */}
                               {isMe ? (
                                 <button onClick={() => handleToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
@@ -267,7 +267,7 @@ export default function GroupDetailPage() {
                                 </button>
                               )}
                               <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-muted">{task.weightage}pts</div>
-                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
+                              {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>
                           ))}
                         </div>
@@ -295,7 +295,7 @@ export default function GroupDetailPage() {
             <h2 className="font-semibold">Leaderboard</h2>
             <div className="flex gap-2">
               {['week', 'month'].map(p => (
-                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-white')}>
+                <button key={p} onClick={() => setPeriod(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', period === p ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
                   {p === 'week' ? 'This Week' : 'This Month'}
                 </button>
               ))}
@@ -353,7 +353,7 @@ export default function GroupDetailPage() {
                       <p className="text-xs text-muted">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">Pending</span>
-                    {role === 'ADMIN' && <button onClick={() => handleCancelInvite(inv.id)} className="text-xs text-muted hover:text-white">Cancel</button>}
+                    {role === 'ADMIN' && <button onClick={() => handleCancelInvite(inv.id)} className="text-xs text-muted hover:text-primary">Cancel</button>}
                   </div>
                 ))}
               </div>
@@ -393,7 +393,7 @@ export default function GroupDetailPage() {
           <div className="max-w-lg w-full animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-white">Proof: {viewProof.title}</p>
-              <button onClick={() => setViewProof(null)} className="text-muted hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setViewProof(null)} className="text-muted hover:text-primary"><X className="w-5 h-5" /></button>
             </div>
             <img src={viewProof.url} alt="Proof" className="w-full rounded-xl max-h-[70vh] object-contain bg-[var(--card-bg)]" />
           </div>
@@ -423,11 +423,11 @@ function ProofModal({ task, onClose, onSubmit }) {
           <Camera className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg font-bold">Photo Proof Required</h2>
         </div>
-        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-white font-medium">"{task.title}"</span></p>
+        <p className="text-sm text-muted mb-4">Upload a photo to complete <span className="text-primary font-medium">"{task.title}"</span></p>
         {preview ? (
           <div className="mb-4">
             <img src={preview} alt="Proof" className="w-full rounded-xl max-h-64 object-cover" />
-            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-white">Change photo</button>
+            <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-primary">Change photo</button>
           </div>
         ) : (
           <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
@@ -517,10 +517,10 @@ function InviteModal({ group, onClose, onInvited }) {
         {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
         <div className="flex gap-2 mb-4">
-          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-white')}>
+          <button onClick={() => setTab('search')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'search' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-primary')}>
             <Users className="w-4 h-4 inline mr-2" />Search Users
           </button>
-          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-white')}>
+          <button onClick={() => setTab('email')} className={cn('flex-1 py-2 rounded-lg text-sm font-medium', tab === 'email' ? 'bg-[var(--card-bg-hover)]' : 'text-muted hover:text-primary')}>
             <Mail className="w-4 h-4 inline mr-2" />Email Invite
           </button>
         </div>

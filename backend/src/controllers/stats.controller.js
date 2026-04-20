@@ -3,6 +3,17 @@ const { getApplicableTasks, computeDayScore } = require('../utils/helpers');
 const taskQ = require('../queries/tasks.queries');
 const statsQ = require('../queries/stats.queries');
 
+// Parse a YYYY-MM-DD key from query as UTC midnight, else fallback to UTC today
+function parseToday(dateKey) {
+  if (dateKey && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
 async function getDaily(req, res, next) {
   try {
     const { date } = req.query;
@@ -28,7 +39,7 @@ async function getDaily(req, res, next) {
 async function getStreak(req, res, next) {
   try {
     const tasks = await taskQ.findActiveTasksByUser(req.user.id);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = parseToday(req.query.date);
     const startDate = new Date(); startDate.setDate(startDate.getDate() - 90);
 
     const completions = await statsQ.findCompletionsByDateRange(req.user.id, startDate, new Date());
@@ -67,8 +78,8 @@ async function getStreak(req, res, next) {
 
 async function getOverview(req, res, next) {
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = parseToday(req.query.date);
+    const tomorrow = new Date(today); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
     const tasks = await prisma.task.findMany({
       where: { userId: req.user.id, isActive: true },
@@ -93,9 +104,9 @@ async function getOverview(req, res, next) {
 
 async function getDashboard(req, res, next) {
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const today = parseToday(req.query.date);
+    const tomorrow = new Date(today); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const yesterday = new Date(today); yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
     const tasks = await taskQ.findActiveTasksByUser(req.user.id);
 
@@ -201,8 +212,8 @@ async function getDashboard(req, res, next) {
 
 async function getRankings(req, res, next) {
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = parseToday(req.query.date);
+    const tomorrow = new Date(today); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
     const myMemberships = await statsQ.findUserMembershipsWithGroup(req.user.id);
     if (myMemberships.length === 0) return res.json({ groups: [] });
