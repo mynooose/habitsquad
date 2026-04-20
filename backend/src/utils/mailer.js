@@ -72,4 +72,27 @@ async function sendVerificationEmail({ to, name, token }) {
   });
 }
 
-module.exports = { sendEmail, sendGroupInviteEmail, sendVerificationEmail };
+async function sendGroupAddedEmail({ to, inviterName, groupName }) {
+  const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
+
+  await sendEmail({
+    to,
+    subject: `${inviterName} invited you to "${groupName}" on HabitSquad`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #6366f1;">You have a new group invite!</h2>
+        <p><strong>${inviterName}</strong> invited you to join the group <strong>"${groupName}"</strong> on HabitSquad.</p>
+        <p>Open the app to accept or decline the invite.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${dashboardUrl}" style="background: #6366f1; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Open HabitSquad
+          </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #999; font-size: 12px;">If you didn't expect this invitation, you can safely ignore it or decline from the app.</p>
+      </div>
+    `
+  });
+}
+
+module.exports = { sendEmail, sendGroupInviteEmail, sendGroupAddedEmail, sendVerificationEmail };

@@ -39,15 +39,25 @@ async function respondToNotification(req, res, next) {
     if (!notif || notif.userId !== req.user.id) return res.status(404).json({ error: 'Notification not found' });
     if (notif.status !== 'PENDING') return res.status(400).json({ error: 'Already responded' });
 
-    // Handle group invite accept/decline
+    // Handle group invite accept/decline — membership is created only on accept
     if (notif.type === 'GROUP_ADDED' && notif.relatedId) {
+      if (action === 'accept') {
+        const existing = await prisma.groupMembership.findUnique({
+          where: { userId_groupId: { userId: req.user.id, groupId: notif.relatedId } }
+        });
+        if (!existing) {
+          await prisma.groupMembership.create({
+            data: { userId: req.user.id, groupId: notif.relatedId, role: 'MEMBER' }
+          });
+        }
+      }
       if (action === 'decline') {
-        // Remove the membership
+        // Membership is not created by new invites, but clean up any
+        // stale membership from the old flow where it was created upfront.
         await prisma.groupMembership.deleteMany({
           where: { userId: req.user.id, groupId: notif.relatedId }
         });
       }
-      // accept = just mark as accepted, user is already in the group
     }
 
     await prisma.notification.update({

@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const prisma = require('../database/prisma');
 const { createGroupSchema, inviteSchema } = require('../utils/validation');
-const { sendGroupInviteEmail } = require('../utils/mailer');
+const { sendGroupInviteEmail, sendGroupAddedEmail } = require('../utils/mailer');
 const { getApplicableTasks, computeDayScore, getTodayRange } = require('../utils/helpers');
 const groupQ = require('../queries/groups.queries');
 const taskQ = require('../queries/tasks.queries');
@@ -61,7 +61,8 @@ async function inviteToGroup(req, res, next) {
     const membership = await groupQ.findMembership(req.user.id, req.params.id);
     if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
 
-    // Helper to notify + email an existing user added to group
+    // Send pending invite notification + email to an existing user.
+    // Membership is NOT created here — only on accept (see notifications.controller).
     const notifyAddedUser = async (userId, userEmail) => {
       const [group, inviter] = await Promise.all([
         prisma.group.findUnique({ where: { id: req.params.id }, select: { name: true } }),
@@ -71,17 +72,24 @@ async function inviteToGroup(req, res, next) {
         data: {
           userId,
           type: 'GROUP_ADDED',
-          title: `Added to ${group.name}`,
-          message: `${inviter.name} added you to the group "${group.name}". Accept to join or decline.`,
+          title: `Invite to ${group.name}`,
+          message: `${inviter.name} invited you to join "${group.name}". Accept to join or decline.`,
           relatedId: req.params.id,
-          actionUrl: `/dashboard/groups/${req.params.id}`,
+          actionUrl: `/dashboard`,
           status: 'PENDING'
         }
       });
       if (userEmail) {
-        sendGroupInviteEmail({ to: userEmail, inviterName: inviter.name, groupName: group.name, inviteCode: 'N/A - You were added directly' })
+        sendGroupAddedEmail({ to: userEmail, inviterName: inviter.name, groupName: group.name })
           .catch(err => console.error('Email failed:', err.message));
       }
+    };
+
+    const hasPendingInviteNotif = async (userId) => {
+      const existing = await prisma.notification.findFirst({
+        where: { userId, type: 'GROUP_ADDED', relatedId: req.params.id, status: 'PENDING' }
+      });
+      return !!existing;
     };
 
     if (data.userId) {
@@ -89,8 +97,8 @@ async function inviteToGroup(req, res, next) {
       if (!targetUser) return res.status(404).json({ error: 'User not found' });
       const existingMembership = await groupQ.findMembership(data.userId, req.params.id);
       if (existingMembership) return res.status(400).json({ error: 'User is already a member' });
-      await groupQ.createMembership(data.userId, req.params.id);
-      res.json({ success: true, message: 'User added to group' });
+      if (await hasPendingInviteNotif(data.userId)) return res.status(400).json({ error: 'Invite already pending' });
+      res.json({ success: true, message: 'Invite sent' });
       notifyAddedUser(data.userId, targetUser.email).catch(err => console.error('Notify failed:', err.message));
       return;
     }
@@ -100,8 +108,8 @@ async function inviteToGroup(req, res, next) {
       if (existingUser) {
         const existingMembership = await groupQ.findMembership(existingUser.id, req.params.id);
         if (existingMembership) return res.status(400).json({ error: 'User is already a member' });
-        await groupQ.createMembership(existingUser.id, req.params.id);
-        res.json({ success: true, message: 'User added to group' });
+        if (await hasPendingInviteNotif(existingUser.id)) return res.status(400).json({ error: 'Invite already pending' });
+        res.json({ success: true, message: 'Invite sent' });
         notifyAddedUser(existingUser.id, data.email).catch(err => console.error('Notify failed:', err.message));
         return;
       }
