@@ -5,11 +5,24 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X, Sparkles, Flame, Shield, Swords, Medal, Star, Gem, Trophy, Crown, Lock } from 'lucide-react';
 import { getLevel, LEVELS } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+
+const LEVEL_ICONS = {
+  1: Sparkles,
+  2: Zap,
+  3: Flame,
+  4: Shield,
+  5: Swords,
+  6: Medal,
+  7: Star,
+  8: Gem,
+  9: Trophy,
+  10: Crown,
+};
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -164,7 +177,7 @@ export default function ProfilePage() {
         {(() => {
           const lvl = getLevel(user?.totalXp || 0);
           return (
-            <div className="mt-4 p-4 rounded-xl glass-card w-full max-w-xs">
+            <div className={cn('mt-4 p-4 rounded-xl glass-card w-full transition-all', showLevels ? 'max-w-md' : 'max-w-xs')}>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center text-lg font-black text-yellow-400">{lvl.level}</div>
                 <div>
@@ -180,24 +193,62 @@ export default function ProfilePage() {
                 {showLevels ? 'Hide levels' : 'View all levels'}
               </button>
               {showLevels && (
-                <div className="mt-3 pt-3 border-t border-[var(--card-border)] space-y-1.5">
-                  {LEVELS.map(l => {
-                    const isCurrent = l.level === lvl.level;
-                    const isUnlocked = (user?.totalXp || 0) >= l.xp;
-                    return (
-                      <div key={l.level} className={cn('flex items-center justify-between text-xs py-1 px-2 rounded-lg', isCurrent && 'bg-yellow-500/10')}>
-                        <div className="flex items-center gap-2">
-                          <span className={cn('w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px]', isUnlocked ? 'bg-yellow-500/20 text-yellow-400' : 'bg-[var(--card-bg-hover)] text-muted')}>
-                            {l.level}
-                          </span>
-                          <span className={cn('font-medium', isUnlocked ? l.color : 'text-muted')}>{l.name}</span>
-                          {isCurrent && <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">You</span>}
-                        </div>
-                        <span className={cn('tabular-nums', isUnlocked ? 'text-primary' : 'text-muted')}>{l.xp} XP</span>
-                      </div>
-                    );
-                  })}
-                  <p className="text-[11px] text-muted pt-2">Complete a task to earn XP equal to its weightage.</p>
+                <div className="mt-4 pt-4 border-t border-[var(--card-border)]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-4">Your Journey</p>
+                  <div className="relative">
+                    {/* Vertical connector line */}
+                    <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gradient-to-b from-yellow-500/40 via-[var(--card-bg-hover)] to-[var(--card-bg-hover)]" />
+                    <div className="space-y-3">
+                      {LEVELS.map((l, i) => {
+                        const isCurrent = l.level === lvl.level;
+                        const totalXp = user?.totalXp || 0;
+                        const isUnlocked = totalXp >= l.xp;
+                        const Icon = LEVEL_ICONS[l.level] || Sparkles;
+                        const nextInLadder = LEVELS[i + 1];
+                        const stepProgress = isUnlocked && nextInLadder
+                          ? Math.min(100, Math.max(0, ((totalXp - l.xp) / (nextInLadder.xp - l.xp)) * 100))
+                          : isUnlocked ? 100 : 0;
+                        return (
+                          <div key={l.level} className="relative flex items-start gap-4">
+                            <div className={cn(
+                              'relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all',
+                              isCurrent ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg shadow-yellow-500/30 ring-4 ring-yellow-500/20' :
+                              isUnlocked ? 'bg-yellow-500/15' : 'bg-[var(--card-bg-hover)]'
+                            )}>
+                              {isUnlocked ? (
+                                <Icon className={cn('w-5 h-5', isCurrent ? 'text-white' : l.color)} />
+                              ) : (
+                                <Lock className="w-4 h-4 text-muted" />
+                              )}
+                            </div>
+                            <div className={cn(
+                              'flex-1 p-3 rounded-xl transition-all',
+                              isCurrent ? 'bg-yellow-500/10 border border-yellow-500/30' :
+                              isUnlocked ? 'bg-[var(--card-bg-hover)]' : 'opacity-60'
+                            )}>
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Lv {l.level}</span>
+                                  <span className={cn('font-bold text-sm', isUnlocked ? l.color : 'text-muted')}>{l.name}</span>
+                                  {isCurrent && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500 text-white font-bold uppercase tracking-wider">You</span>}
+                                </div>
+                                <span className={cn('text-xs tabular-nums', isUnlocked ? 'font-semibold' : 'text-muted')}>{l.xp} XP</span>
+                              </div>
+                              {isCurrent && nextInLadder && (
+                                <>
+                                  <div className="h-1.5 rounded-full bg-[var(--card-bg-hover)] overflow-hidden mt-2">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all" style={{ width: `${stepProgress}%` }} />
+                                  </div>
+                                  <p className="text-[11px] text-muted mt-1">{nextInLadder.xp - totalXp} XP to {nextInLadder.name}</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted text-center mt-4 italic">Complete a task to earn XP equal to its weightage.</p>
                 </div>
               )}
             </div>
