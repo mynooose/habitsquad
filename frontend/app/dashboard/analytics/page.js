@@ -56,16 +56,21 @@ export default function PersonalAnalyticsPage() {
       <div className="p-5 rounded-2xl glass-card">
         <h2 className="font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Daily Activity</h2>
         <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(data.history.length, data.days)}, 1fr)` }}>
-          {data.history.map(h => (
-            <div key={h.date} title={`${h.date}: ${h.completedCount}/${h.totalCount} · ${h.score}%`}
-              className={cn('aspect-square rounded-sm min-w-[6px]',
-                h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
-                h.score >= 80 ? 'bg-green-500' :
-                h.score >= 50 ? 'bg-blue-500' :
-                h.score > 0 ? 'bg-amber-500' :
-                'bg-red-500/30'
-              )} />
-          ))}
+          {data.history.map((h, idx) => {
+            const isLast = idx === data.history.length - 1;
+            const pending = isLast && h.totalCount > 0 && h.completedCount === 0;
+            return (
+              <div key={h.date} title={`${h.date}: ${pending ? 'In progress' : `${h.completedCount}/${h.totalCount} · ${h.score}%`}`}
+                className={cn('aspect-square rounded-sm min-w-[6px]',
+                  pending ? 'bg-[var(--card-bg-hover)] border border-dashed border-blue-400' :
+                  h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                  h.score >= 80 ? 'bg-green-500' :
+                  h.score >= 50 ? 'bg-blue-500' :
+                  h.score > 0 ? 'bg-amber-500' :
+                  'bg-red-500/30'
+                )} />
+            );
+          })}
         </div>
         <div className="flex items-center justify-between mt-3 text-xs text-muted">
           <span>{data.history[0]?.date}</span>
@@ -74,6 +79,7 @@ export default function PersonalAnalyticsPage() {
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
           </div>
           <span>{data.history[data.history.length - 1]?.date}</span>
         </div>

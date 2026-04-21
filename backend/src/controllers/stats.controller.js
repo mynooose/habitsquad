@@ -187,23 +187,41 @@ async function getDashboard(req, res, next) {
       personalBest = Math.max(personalBest, dayWeight > 0 ? Math.round((dayCompleted / dayWeight) * 100) : 0);
     }
 
-    // Streaks: "full" (all tasks completed) and "show-up" (>=1 task completed)
+    // Streaks — iterate back from today (i=0). Today with no activity is
+    // "pending" (doesn't break); days with no applicable habits are neutral.
     let currentStreak = 0, longestStreak = 0, tempStreak = 0;
     let showUpCurrent = 0, showUpLongest = 0, showUpTemp = 0;
+    let currentBroken = false, showUpBroken = false;
     for (let i = 0; i <= 90; i++) {
       const checkDate = new Date(today); checkDate.setDate(checkDate.getDate() - i);
       const dk = checkDate.toISOString().split('T')[0];
       const applicable = getApplicableTasks(tasks, checkDate);
       const completed = allByDate[dk] || new Set();
-      const allDone = applicable.length > 0 && applicable.every(t => completed.has(t.id));
+      const hasHabits = applicable.length > 0;
+      const allDone = hasHabits && applicable.every(t => completed.has(t.id));
       const showedUp = completed.size > 0;
-      if (allDone) { tempStreak++; if (i === 0 || currentStreak > 0) currentStreak = tempStreak; }
-      else if (i > 0) { tempStreak = 0; }
-      longestStreak = Math.max(longestStreak, tempStreak);
 
-      if (showedUp) { showUpTemp++; if (i === 0 || showUpCurrent > 0) showUpCurrent = showUpTemp; }
-      else if (i > 0) { showUpTemp = 0; }
-      showUpLongest = Math.max(showUpLongest, showUpTemp);
+      // Current: all-done streak
+      if (!currentBroken) {
+        if (allDone) currentStreak++;
+        else if (!hasHabits) { /* neutral */ }
+        else if (i === 0) { /* today pending */ }
+        else currentBroken = true;
+      }
+      // Longest: any all-done run
+      if (allDone) { tempStreak++; longestStreak = Math.max(longestStreak, tempStreak); }
+      else if (hasHabits) tempStreak = 0;
+
+      // Current: show-up streak
+      if (!showUpBroken) {
+        if (showedUp) showUpCurrent++;
+        else if (!hasHabits) { /* neutral */ }
+        else if (i === 0) { /* today pending */ }
+        else showUpBroken = true;
+      }
+      // Longest: any show-up run
+      if (showedUp) { showUpTemp++; showUpLongest = Math.max(showUpLongest, showUpTemp); }
+      else if (hasHabits) showUpTemp = 0;
     }
 
     // Last 7 days daily scores (for chart, oldest first)
@@ -274,17 +292,21 @@ async function getPersonalAnalytics(req, res, next) {
       weekdayCounts[d.getUTCDay()] += completed.size;
     }
 
-    // Streaks
-    let showUpCurrent = 0, showUpLongest = 0, temp = 0;
+    // Current streak walks backward from today; today with no activity is
+    // "pending" (doesn't break). Days with no applicable habits are neutral.
+    let showUpCurrent = 0;
     for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i];
-      if (h.completedCount > 0) { temp++; if (i === history.length - 1 || showUpCurrent > 0) showUpCurrent = temp; }
-      else if (i < history.length - 1) break;
+      if (h.completedCount > 0) showUpCurrent++;
+      else if (h.totalCount === 0) continue; // neutral day
+      else if (i === history.length - 1) continue; // today pending
+      else break;
     }
-    temp = 0;
+    // Longest streak — any window anywhere
+    let showUpLongest = 0, temp = 0;
     for (const h of history) {
       if (h.completedCount > 0) { temp++; showUpLongest = Math.max(showUpLongest, temp); }
-      else temp = 0;
+      else if (h.totalCount > 0) temp = 0;
     }
 
     // Per-habit breakdown: completion rate over the window for each active task
@@ -312,10 +334,13 @@ async function getPersonalAnalytics(req, res, next) {
     const mostActiveIdx = weekdayCounts.indexOf(Math.max(...weekdayCounts));
     const weekdayBreakdown = weekdayCounts.map((count, i) => ({ day: weekdayNames[i], count }));
 
-    const weekAvg = history.length >= 7
-      ? Math.round(history.slice(-7).reduce((s, h) => s + h.score, 0) / 7)
-      : 0;
-    const windowAvg = Math.round(history.reduce((s, h) => s + h.score, 0) / history.length);
+    // Averages only count days that had habits scheduled (skip totalCount===0)
+    const avgOf = (days) => {
+      const real = days.filter(h => h.totalCount > 0);
+      return real.length ? Math.round(real.reduce((s, h) => s + h.score, 0) / real.length) : 0;
+    };
+    const weekAvg = avgOf(history.slice(-7));
+    const windowAvg = avgOf(history);
     const bestDay = history.reduce((best, h) => h.score > best.score ? h : best, { score: 0, date: null });
 
     res.json({

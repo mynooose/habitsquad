@@ -246,17 +246,20 @@ async function getAnalytics(req, res, next) {
         });
       }
 
-      // Show-up streak within the window (current ending today, longest any window)
-      let showUpCurrent = 0, showUpLongest = 0, temp = 0;
+      // Current streak — walk backward from today; today pending and
+      // no-habit days are neutral. Longest — any window.
+      let showUpCurrent = 0;
       for (let i = history.length - 1; i >= 0; i--) {
         const h = history[i];
-        if (h.completedCount > 0) { temp++; if (i === history.length - 1 || showUpCurrent > 0) showUpCurrent = temp; }
-        else if (i < history.length - 1) break;
+        if (h.completedCount > 0) showUpCurrent++;
+        else if (h.totalCount === 0) continue;
+        else if (i === history.length - 1) continue;
+        else break;
       }
-      temp = 0;
+      let showUpLongest = 0, temp = 0;
       for (const h of history) {
         if (h.completedCount > 0) { temp++; showUpLongest = Math.max(showUpLongest, temp); }
-        else temp = 0;
+        else if (h.totalCount > 0) temp = 0;
       }
 
       // Top habit — most completions in window
@@ -280,16 +283,22 @@ async function getAnalytics(req, res, next) {
       };
     });
 
-    // Group pulse
+    // Group pulse — only average over member-days that had habits scheduled.
+    // Days with no habits (just-joined members, etc.) would otherwise dilute.
     const todayKey = dateKey(now);
-    const todayScores = memberAnalytics.map(ma => ma.history[ma.history.length - 1]?.score || 0);
-    const todayAvg = todayScores.length ? Math.round(todayScores.reduce((s, v) => s + v, 0) / todayScores.length) : 0;
+    const todayMemberScores = memberAnalytics
+      .map(ma => ma.history[ma.history.length - 1])
+      .filter(h => h && h.totalCount > 0)
+      .map(h => h.score);
+    const todayAvg = todayMemberScores.length
+      ? Math.round(todayMemberScores.reduce((s, v) => s + v, 0) / todayMemberScores.length)
+      : 0;
 
     const weekScores = [];
     const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]; // Sun..Sat
     memberAnalytics.forEach(ma => {
       ma.history.slice(-7).forEach(h => {
-        weekScores.push(h.score);
+        if (h.totalCount > 0) weekScores.push(h.score);
         const d = new Date(h.date + 'T12:00:00');
         weekdayCounts[d.getUTCDay()] += h.completedCount;
       });

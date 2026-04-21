@@ -186,32 +186,6 @@ export default function GroupDetailPage() {
         </button>
       </div>
 
-      {/* Member strip — always visible with avatar + level badge */}
-      <div className="mb-6 p-4 rounded-xl glass-card">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Members ({memberTasks.length})</p>
-        <div className="flex flex-wrap gap-3">
-          {[...memberTasks].sort((a, b) => (a.user.id === user?.id ? -1 : b.user.id === user?.id ? 1 : (b.totalXp || 0) - (a.totalXp || 0))).map(m => {
-            const isMe = m.user.id === user?.id;
-            const lvl = getLevel(m.totalXp || 0);
-            return (
-              <div key={m.user.id} className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full bg-[var(--card-bg-hover)]">
-                <div className="relative">
-                  {m.user.avatar ? (
-                    <img src={m.user.avatar} alt={m.user.name} className="w-8 h-8 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-[var(--card-bg)] flex items-center justify-center text-xs font-bold">{getInitials(m.user.name)}</div>
-                  )}
-                  {m.role === 'ADMIN' && <Crown className="absolute -top-1 -right-1 w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-xs font-semibold">{isMe ? 'You' : m.user.name.split(' ')[0]}</span>
-                  <span className={cn('text-[10px] font-bold', lvl.color)}>Lv.{lvl.level}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Invite Code */}
       <div className="p-4 rounded-xl glass-card flex items-center gap-4 mb-6">
@@ -804,150 +778,145 @@ function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expande
 
   const { groupPulse, members, activityFeed, days } = analytics;
   const streakLeaders = [...members].sort((a, b) => b.showUpStreak.current - a.showUpStreak.current).slice(0, 3);
+  const activeTodayCount = members.filter(m => (m.history[m.history.length - 1]?.completedCount || 0) > 0).length;
 
   return (
-    <div className="space-y-6">
-      {/* Group Pulse */}
-      <div>
-        <h2 className="font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Group Pulse</h2>
+    <div className="space-y-8">
+      {/* Group Pulse — colored KPI tiles with icons */}
+      <section>
+        <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Activity className="w-5 h-5 text-brand-500" /> Group Pulse</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-4 rounded-2xl glass-card">
-            <p className="text-xs uppercase tracking-wider text-muted mb-1">Today avg</p>
-            <p className="text-2xl font-black text-primary">{groupPulse.todayAvg}%</p>
-          </div>
-          <div className="p-4 rounded-2xl glass-card">
-            <p className="text-xs uppercase tracking-wider text-muted mb-1">7-day avg</p>
-            <p className="text-2xl font-black text-primary">{groupPulse.weekAvg}%</p>
-          </div>
-          <div className="p-4 rounded-2xl glass-card">
-            <p className="text-xs uppercase tracking-wider text-muted mb-1">Week completions</p>
-            <p className="text-2xl font-black text-primary">{groupPulse.weekCompletions}</p>
-          </div>
-          <div className="p-4 rounded-2xl glass-card">
-            <p className="text-xs uppercase tracking-wider text-muted mb-1">Most active</p>
-            <p className="text-lg font-bold text-primary">{groupPulse.mostActiveWeekday || '—'}</p>
-          </div>
+          <PulseTile color="blue" icon={<Activity className="w-5 h-5" />} label="Today avg" value={`${groupPulse.todayAvg}%`} sub={`${activeTodayCount} of ${members.length} active`} />
+          <PulseTile color="purple" icon={<TrendingUp className="w-5 h-5" />} label="7-day avg" value={`${groupPulse.weekAvg}%`} sub="across all members" />
+          <PulseTile color="green" icon={<CheckCircle2 className="w-5 h-5" />} label="Week completions" value={groupPulse.weekCompletions} sub="last 7 days" />
+          <PulseTile color="orange" icon={<Flame className="w-5 h-5" />} label="Most active" value={groupPulse.mostActiveWeekday || '—'} sub="peak weekday" />
         </div>
-      </div>
+      </section>
 
-      {/* Top streakers */}
+      {/* Top streakers — podium */}
       {streakLeaders.some(m => m.showUpStreak.current > 0) && (
-        <div>
-          <h2 className="font-semibold mb-3 flex items-center gap-2"><Flame className="w-4 h-4 text-orange-400" /> Top Show-up Streaks</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {streakLeaders.map((m, i) => (
-              <div key={m.user.id} className={cn('p-3 rounded-2xl glass-card flex items-center gap-3',
-                i === 0 && 'bg-gradient-to-br from-yellow-500/15 to-amber-500/10 border-yellow-500/30')}>
-                {m.user.avatar ? (
-                  <img src={m.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-bold">{getInitials(m.user.name)}</div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{m.user.id === currentUserId ? 'You' : m.user.name}</p>
-                  <p className="text-xs text-muted">{m.showUpStreak.current} day{m.showUpStreak.current === 1 ? '' : 's'} in a row</p>
+        <section>
+          <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Flame className="w-5 h-5 text-orange-400" /> Top Show-up Streaks</h2>
+          <div className="grid grid-cols-3 gap-3 items-end">
+            {/* Render as podium: 2nd, 1st (taller), 3rd */}
+            {[1, 0, 2].map(idx => {
+              const m = streakLeaders[idx];
+              if (!m || m.showUpStreak.current === 0) return <div key={idx} />;
+              const rank = idx + 1;
+              const isGold = rank === 1;
+              const isSilver = rank === 2;
+              const isBronze = rank === 3;
+              return (
+                <div key={m.user.id} className={cn('p-4 rounded-2xl text-center relative',
+                  isGold ? 'bg-gradient-to-br from-yellow-400/20 to-amber-500/10 border border-yellow-500/40 shadow-lg shadow-yellow-500/10 transform sm:scale-105' :
+                  isSilver ? 'bg-gradient-to-br from-zinc-300/15 to-zinc-400/5 border border-zinc-400/30' :
+                  'bg-gradient-to-br from-amber-700/15 to-amber-800/5 border border-amber-700/30')}>
+                  <div className={cn('absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-md',
+                    isGold ? 'bg-yellow-500 text-white' : isSilver ? 'bg-zinc-400 text-white' : 'bg-amber-700 text-white')}>
+                    {rank}
+                  </div>
+                  <div className="flex justify-center mb-2 mt-2">
+                    {m.user.avatar ? (
+                      <img src={m.user.avatar} alt="" className={cn('rounded-full object-cover', isGold ? 'w-14 h-14 ring-2 ring-yellow-500' : 'w-12 h-12')} />
+                    ) : (
+                      <div className={cn('rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center font-bold', isGold ? 'w-14 h-14 text-base ring-2 ring-yellow-500' : 'w-12 h-12 text-sm')}>{getInitials(m.user.name)}</div>
+                    )}
+                  </div>
+                  <p className={cn('font-semibold truncate', isGold ? 'text-base' : 'text-sm')}>{m.user.id === currentUserId ? 'You' : m.user.name.split(' ')[0]}</p>
+                  <p className={cn('font-black tabular-nums', isGold ? 'text-2xl text-yellow-500' : isSilver ? 'text-xl text-zinc-400' : 'text-xl text-amber-600')}>{m.showUpStreak.current}<span className="text-xs font-semibold ml-0.5 opacity-70">d</span></p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted">in a row</p>
                 </div>
-                {i === 0 && <Crown className="w-5 h-5 text-yellow-500" />}
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Per-member history */}
-      <div>
-        <h2 className="font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Member History <span className="text-xs text-muted font-normal">(last {days} days)</span></h2>
+      {/* Per-member history — redesigned cards */}
+      <section>
+        <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-brand-500" /> Member History <span className="text-xs text-muted font-normal">(last {days} days)</span></h2>
         <div className="space-y-3">
           {[...members].sort((a, b) => (a.user.id === currentUserId ? -1 : b.user.id === currentUserId ? 1 : b.totalXp - a.totalXp)).map(m => {
             const isMe = m.user.id === currentUserId;
             const isOpen = expandedMember === m.user.id;
             const lvl = getLevel(m.totalXp || 0);
             return (
-              <div key={m.user.id} className="rounded-2xl glass-card overflow-hidden">
-                <button onClick={() => setExpandedMember(isOpen ? null : m.user.id)}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-[var(--card-bg-hover)] transition-colors">
-                  {m.user.avatar ? (
-                    <img src={m.user.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-11 h-11 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-bold">{getInitials(m.user.name)}</div>
-                  )}
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="font-semibold flex items-center gap-2">
-                      <span className="truncate">{isMe ? 'You' : m.user.name}</span>
-                      {m.role === 'ADMIN' && <Crown className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
-                      <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--card-bg-hover)]', lvl.color)}>Lv.{lvl.level}</span>
-                    </p>
-                    <p className="text-xs text-muted">
-                      {m.totalCompletions} completions · Streak {m.showUpStreak.current}d
-                      {m.topHabit && <> · Top: <span className="font-medium">{m.topHabit.title}</span></>}
-                    </p>
+              <div key={m.user.id} className={cn('rounded-2xl glass-card overflow-hidden transition-all',
+                isMe && 'ring-1 ring-brand-500/30 bg-brand-500/5')}>
+                <div className="p-4">
+                  {/* Top row: avatar + name + level + chevron */}
+                  <div className="flex items-center gap-3 mb-3">
+                    {m.user.avatar ? (
+                      <img src={m.user.avatar} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-bold shrink-0">{getInitials(m.user.name)}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold truncate">{isMe ? 'You' : m.user.name}</p>
+                        {m.role === 'ADMIN' && <span className="flex items-center gap-1 text-[10px] bg-yellow-500/20 text-yellow-600 px-1.5 py-0.5 rounded-full font-bold"><Crown className="w-3 h-3" /> Admin</span>}
+                        <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--card-bg-hover)]', lvl.color)}>Lv.{lvl.level} {lvl.name}</span>
+                      </div>
+                      {m.topHabit && (
+                        <p className="text-xs text-muted mt-0.5 truncate">Favorite: <span className="font-medium text-primary">{m.topHabit.title}</span> <span className="opacity-60">({m.topHabit.completions}×)</span></p>
+                      )}
+                    </div>
+                    <button onClick={() => setExpandedMember(isOpen ? null : m.user.id)} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted shrink-0">
+                      {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
                   </div>
-                  {/* Mini 30-day heatmap always visible */}
-                  <div className="hidden md:grid gap-0.5 shrink-0" style={{ gridTemplateColumns: `repeat(${Math.min(m.history.length, 30)}, 6px)` }}>
-                    {m.history.slice(-30).map(h => (
-                      <div key={h.date} title={`${h.date}: ${h.score}%`}
-                        className={cn('h-4 rounded-sm',
-                          h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
-                          h.score >= 80 ? 'bg-green-500' :
-                          h.score >= 50 ? 'bg-blue-500' :
-                          h.score > 0 ? 'bg-amber-500' :
-                          'bg-red-500/30'
-                        )} />
-                    ))}
+
+                  {/* Stat row */}
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <InlineStat label="Streak" value={`${m.showUpStreak.current}d`} accent="text-orange-400" />
+                    <InlineStat label="Longest" value={`${m.showUpStreak.longest}d`} />
+                    <InlineStat label="Done" value={m.totalCompletions} accent="text-green-500" />
+                    <InlineStat label="XP" value={m.totalXp} accent="text-yellow-500" />
                   </div>
-                  {isOpen ? <ChevronDown className="w-4 h-4 text-muted shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted shrink-0" />}
-                </button>
+
+                  {/* Full-width heatmap */}
+                  <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${Math.min(m.history.length, days)}, 1fr)` }}>
+                    {m.history.map((h, idx, arr) => {
+                      const pending = idx === arr.length - 1 && h.totalCount > 0 && h.completedCount === 0;
+                      return (
+                        <div key={h.date} title={`${h.date}: ${pending ? 'In progress' : `${h.completedCount}/${h.totalCount} · ${h.score}%`}`}
+                          className={cn('h-5 rounded-sm',
+                            pending ? 'bg-[var(--card-bg-hover)] border border-dashed border-blue-400' :
+                            h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                            h.score >= 80 ? 'bg-green-500' :
+                            h.score >= 50 ? 'bg-blue-500' :
+                            h.score > 0 ? 'bg-amber-500' :
+                            'bg-red-500/30'
+                          )} />
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {isOpen && (
-                  <div className="border-t border-[var(--card-border)] p-4 space-y-4">
-                    {/* 7-day bar chart */}
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted mb-2">Last 7 Days</p>
-                      <div className="flex items-end justify-between gap-1.5 h-16">
-                        {m.last7Days.map(d => {
-                          const date = new Date(d.date + 'T12:00:00');
-                          const label = date.toLocaleDateString('en-US', { weekday: 'narrow' });
-                          return (
-                            <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date}: ${d.completedCount}/${d.totalCount} · ${d.score}%`}>
-                              <div className="relative w-full flex items-end" style={{ height: '44px' }}>
-                                <div className={cn('w-full rounded-md',
-                                  d.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
-                                  d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400' :
-                                  d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400' :
-                                  d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400' :
-                                  'bg-red-500/30')}
-                                  style={{ height: `${Math.max(d.score, 4)}%` }} />
-                              </div>
-                              <span className="text-[10px] font-semibold text-muted">{label}</span>
+                  <div className="border-t border-[var(--card-border)] p-4 bg-[var(--card-bg-hover)]/30">
+                    <p className="text-xs uppercase tracking-wider text-muted mb-3 font-semibold">Last 7 days breakdown</p>
+                    <div className="flex items-end justify-between gap-2 h-20">
+                      {m.last7Days.map(d => {
+                        const date = new Date(d.date + 'T12:00:00');
+                        const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+                        const pending = d === m.last7Days[m.last7Days.length - 1] && d.totalCount > 0 && d.completedCount === 0;
+                        return (
+                          <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5" title={`${d.date}: ${pending ? 'In progress' : `${d.completedCount}/${d.totalCount} · ${d.score}%`}`}>
+                            <div className="relative w-full flex items-end" style={{ height: '64px' }}>
+                              <div className={cn('w-full rounded-lg',
+                                pending ? 'bg-[var(--card-bg-hover)] border-2 border-dashed border-blue-400' :
+                                d.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                                d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400' :
+                                d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400' :
+                                d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400' :
+                                'bg-red-500/30')}
+                                style={{ height: `${Math.max(d.score, 8)}%` }} />
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Stat chips */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                      <StatChip label="Streak" value={`${m.showUpStreak.current}d`} accent="text-orange-400" />
-                      <StatChip label="Longest" value={`${m.showUpStreak.longest}d`} />
-                      <StatChip label="Completions" value={m.totalCompletions} accent="text-green-400" />
-                      <StatChip label="XP" value={m.totalXp} accent="text-yellow-400" />
-                    </div>
-
-                    {/* Full heatmap (mobile) */}
-                    <div className="md:hidden">
-                      <p className="text-xs uppercase tracking-wider text-muted mb-2">{days}-day activity</p>
-                      <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${Math.min(m.history.length, days)}, 1fr)` }}>
-                        {m.history.map(h => (
-                          <div key={h.date} title={`${h.date}: ${h.score}%`}
-                            className={cn('h-3 rounded-sm',
-                              h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
-                              h.score >= 80 ? 'bg-green-500' :
-                              h.score >= 50 ? 'bg-blue-500' :
-                              h.score > 0 ? 'bg-amber-500' :
-                              'bg-red-500/30'
-                            )} />
-                        ))}
-                      </div>
+                            <span className="text-[10px] font-semibold text-muted">{label}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -960,6 +929,7 @@ function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expande
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
         </div>
       </div>
@@ -1044,11 +1014,31 @@ function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expande
   );
 }
 
-function StatChip({ label, value, accent }) {
+function PulseTile({ color, icon, label, value, sub }) {
+  const colorMap = {
+    blue:   { bg: 'from-blue-500/10 to-sky-500/5',       ring: 'border-blue-500/20',   fg: 'text-blue-500' },
+    purple: { bg: 'from-purple-500/10 to-indigo-500/5',  ring: 'border-purple-500/20', fg: 'text-purple-500' },
+    green:  { bg: 'from-emerald-500/10 to-green-500/5',  ring: 'border-emerald-500/20', fg: 'text-emerald-500' },
+    orange: { bg: 'from-orange-500/10 to-amber-500/5',   ring: 'border-orange-500/20', fg: 'text-orange-500' },
+  };
+  const c = colorMap[color] || colorMap.blue;
   return (
-    <div className="p-2 rounded-xl bg-[var(--card-bg-hover)]">
-      <p className="text-[10px] uppercase tracking-wider text-muted">{label}</p>
-      <p className={cn('font-bold text-sm', accent || 'text-primary')}>{value}</p>
+    <div className={cn('p-4 rounded-2xl border bg-gradient-to-br', c.bg, c.ring)}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className={cn('w-8 h-8 rounded-xl bg-white/80 dark:bg-white/5 flex items-center justify-center', c.fg)}>{icon}</div>
+        <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">{label}</p>
+      </div>
+      <p className="text-2xl font-black tabular-nums">{value}</p>
+      {sub && <p className="text-[11px] text-muted mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function InlineStat({ label, value, accent }) {
+  return (
+    <div className="p-2 rounded-lg bg-[var(--card-bg-hover)] text-center">
+      <p className="text-[9px] uppercase tracking-wider text-muted font-semibold">{label}</p>
+      <p className={cn('font-black text-sm tabular-nums', accent || 'text-primary')}>{value}</p>
     </div>
   );
 }
