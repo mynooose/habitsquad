@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, Activity, Flame } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
@@ -230,39 +230,50 @@ export default function GroupDetailPage() {
                 const isMe = member.user.id === user?.id;
                 const isExpanded = expandedMembers[member.user.id] !== false;
                 const mColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-                // Shamed only if they started but fell short — pure 0% is "not started yet"
-                const isShamed = member.totalCount > 0 && member.score > 0 && member.score < 50;
                 const isPerfect = member.totalCount > 0 && member.score === 100;
+                const isBehind = member.totalCount > 0 && member.score > 0 && member.score < 50;
                 const noActivity = member.totalCount > 0 && member.completedCount === 0;
+                const hasNoTasks = member.totalCount === 0;
                 const lvl = getLevel(member.totalXp || 0);
 
+                // Card keeps the member's assigned color — status is shown via an inline badge + icon.
+                // Perfect: green ring over member color. Everything else: plain member color.
                 return (
                   <div key={member.user.id} className={cn('rounded-xl border overflow-hidden',
-                    isPerfect ? 'bg-green-500/10 border-green-500/30 ring-1 ring-green-500/20' :
-                    isShamed ? 'bg-red-500/8 border-red-500/25' :
-                    cn(mColor.bg, mColor.border))}>
+                    mColor.bg, mColor.border,
+                    isPerfect && 'ring-1 ring-green-500/40')}>
                     {/* Member Header */}
                     <button onClick={() => toggleMember(member.user.id)} className="w-full flex items-center gap-4 p-4 hover:bg-[var(--card-bg-hover)] transition-colors">
-                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
-                        isPerfect ? 'bg-green-500/25 text-green-400' :
-                        isShamed ? 'bg-red-500/20 text-red-400' :
-                        cn(mColor.avatarBg, mColor.accent))}>
-                        {isPerfect ? <Star className="w-5 h-5" /> : isShamed ? <Skull className="w-5 h-5" /> : getInitials(member.user.name)}
+                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 relative', mColor.avatarBg, mColor.accent)}>
+                        {member.user.avatar ? (
+                          <img src={member.user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                        ) : getInitials(member.user.name)}
+                        {isPerfect && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center ring-2 ring-[var(--card-bg-solid)]">
+                            <Star className="w-2.5 h-2.5 text-white fill-white" />
+                          </span>
+                        )}
                       </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-medium flex items-center gap-1.5">
-                          {member.user.name} {isMe && <span className="text-muted">(You)</span>}
-                          {member.role === 'ADMIN' && <span className="ml-1 text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full">Admin</span>}
-                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-[var(--card-bg)]')}>Lv.{lvl.level}</span>
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="font-medium flex items-center gap-1.5 flex-wrap">
+                          <span className="truncate">{member.user.name}</span>
+                          {isMe && <span className="text-muted">(You)</span>}
+                          {member.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full flex items-center gap-1"><Crown className="w-3 h-3" /> Admin</span>}
+                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold bg-[var(--card-bg)]', lvl.color)}>Lv.{lvl.level}</span>
+                          {isPerfect && <span className="text-[10px] bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Star className="w-3 h-3 fill-green-600" /> Perfect day</span>}
+                          {isBehind && <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Falling behind</span>}
+                          {noActivity && <span className="text-[10px] bg-[var(--card-bg)] text-muted px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Hourglass className="w-3 h-3" /> Yet to start</span>}
+                          {hasNoTasks && <span className="text-[10px] bg-[var(--card-bg)] text-muted px-2 py-0.5 rounded-full italic">No habits yet</span>}
                         </p>
-                        <p className="text-xs text-muted">
-                          {noActivity ? <span className="italic">No activity today</span> :
+                        <p className="text-xs text-muted mt-0.5">
+                          {hasNoTasks ? 'Waiting to set up habits' :
+                            noActivity ? "Hasn't started today" :
                             <>{member.completedCount}/{member.totalCount} completed</>}
                           {' '}&middot; {member.totalXp || 0} XP
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className={cn('text-xl font-bold', isPerfect ? 'text-green-400' : isShamed ? 'text-red-400' : mColor.accent)}>{member.score}%</div>
+                        <div className={cn('text-xl font-bold tabular-nums', isPerfect ? 'text-green-500' : isBehind ? 'text-amber-500' : mColor.accent)}>{member.score}%</div>
                         {isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />}
                       </div>
                     </button>
