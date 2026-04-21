@@ -204,12 +204,21 @@ class ApiClient {
     return this.request(`/stats/dashboard?date=${this.getLocalDateKey()}`);
   }
 
+  async getWeek(endDate = null) {
+    const ed = endDate || this.getLocalDateKey();
+    return this.request(`/stats/week?endDate=${ed}`);
+  }
+
   async getDashboardRankings() {
     return this.request('/stats/rankings');
   }
 
   async getLeaderboard(groupId, period = 'week') {
     return this.request(`/groups/${groupId}/leaderboard?period=${period}`);
+  }
+
+  async getGroupAnalytics(groupId, days = 30) {
+    return this.request(`/groups/${groupId}/analytics?days=${days}`);
   }
 
   async inviteToGroup(groupId, data) {

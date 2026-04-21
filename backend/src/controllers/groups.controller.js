@@ -184,6 +184,142 @@ async function getMemberTasks(req, res, next) {
   } catch (error) { next(error); }
 }
 
+async function getAnalytics(req, res, next) {
+  try {
+    const membership = await groupQ.findMembership(req.user.id, req.params.id);
+    if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
+
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 7), 90);
+    const members = await groupQ.findGroupMembers(req.params.id);
+    const memberIds = members.map(m => m.userId);
+
+    const now = new Date(); now.setUTCHours(0, 0, 0, 0);
+    const tomorrow = new Date(now); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const startDate = new Date(now); startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+    const weekStart = new Date(now); weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+
+    const [allTasks, allCompletions, xpList] = await Promise.all([
+      prisma.task.findMany({ where: { userId: { in: memberIds }, groupId: req.params.id } }),
+      prisma.taskCompletion.findMany({
+        where: { userId: { in: memberIds }, task: { groupId: req.params.id }, date: { gte: startDate, lt: tomorrow } },
+        include: { task: { select: { id: true, title: true, color: true, weightage: true, isActive: true } } },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, totalXp: true } })
+    ]);
+
+    const xpMap = Object.fromEntries(xpList.map(u => [u.id, u.totalXp]));
+    const tasksByUser = {};
+    allTasks.forEach(t => { if (!tasksByUser[t.userId]) tasksByUser[t.userId] = []; tasksByUser[t.userId].push(t); });
+
+    const dateKey = (d) => d.toISOString().split('T')[0];
+    const completionsByUserDate = {};
+    allCompletions.forEach(c => {
+      const dk = dateKey(c.date);
+      if (!completionsByUserDate[c.userId]) completionsByUserDate[c.userId] = {};
+      if (!completionsByUserDate[c.userId][dk]) completionsByUserDate[c.userId][dk] = new Set();
+      completionsByUserDate[c.userId][dk].add(c.taskId);
+    });
+
+    // Per-member analytics
+    const memberAnalytics = members.map(m => {
+      const myTasks = tasksByUser[m.userId] || [];
+      const activeTasks = myTasks.filter(t => t.isActive);
+      const byDate = completionsByUserDate[m.userId] || {};
+
+      const history = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(startDate); d.setUTCDate(d.getUTCDate() + i);
+        const dk = dateKey(d);
+        const applicable = getApplicableTasks(activeTasks, d);
+        const completed = byDate[dk] || new Set();
+        const weight = applicable.reduce((s, t) => s + t.weightage, 0);
+        const done = computeDayScore(applicable, completed);
+        history.push({
+          date: dk,
+          score: weight > 0 ? Math.round((done / weight) * 100) : 0,
+          completedCount: completed.size,
+          totalCount: applicable.length
+        });
+      }
+
+      // Show-up streak within the window (current ending today, longest any window)
+      let showUpCurrent = 0, showUpLongest = 0, temp = 0;
+      for (let i = history.length - 1; i >= 0; i--) {
+        const h = history[i];
+        if (h.completedCount > 0) { temp++; if (i === history.length - 1 || showUpCurrent > 0) showUpCurrent = temp; }
+        else if (i < history.length - 1) break;
+      }
+      temp = 0;
+      for (const h of history) {
+        if (h.completedCount > 0) { temp++; showUpLongest = Math.max(showUpLongest, temp); }
+        else temp = 0;
+      }
+
+      // Top habit — most completions in window
+      const myCompletions = allCompletions.filter(c => c.userId === m.userId);
+      const habitCounts = {};
+      myCompletions.forEach(c => { habitCounts[c.taskId] = (habitCounts[c.taskId] || 0) + 1; });
+      let topHabit = null, topCount = 0;
+      for (const [tid, count] of Object.entries(habitCounts)) {
+        if (count > topCount) { topCount = count; const task = myTasks.find(t => t.id === tid); if (task) topHabit = { id: tid, title: task.title, color: task.color, completions: count }; }
+      }
+
+      return {
+        user: m.user,
+        role: m.role,
+        totalXp: xpMap[m.userId] || 0,
+        history,
+        last7Days: history.slice(-7),
+        showUpStreak: { current: showUpCurrent, longest: showUpLongest },
+        topHabit,
+        totalCompletions: myCompletions.length
+      };
+    });
+
+    // Group pulse
+    const todayKey = dateKey(now);
+    const todayScores = memberAnalytics.map(ma => ma.history[ma.history.length - 1]?.score || 0);
+    const todayAvg = todayScores.length ? Math.round(todayScores.reduce((s, v) => s + v, 0) / todayScores.length) : 0;
+
+    const weekScores = [];
+    const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]; // Sun..Sat
+    memberAnalytics.forEach(ma => {
+      ma.history.slice(-7).forEach(h => {
+        weekScores.push(h.score);
+        const d = new Date(h.date + 'T12:00:00');
+        weekdayCounts[d.getUTCDay()] += h.completedCount;
+      });
+    });
+    const weekAvg = weekScores.length ? Math.round(weekScores.reduce((s, v) => s + v, 0) / weekScores.length) : 0;
+    const weekCompletions = allCompletions.filter(c => c.date >= weekStart).length;
+    const mostActiveIdx = weekdayCounts.indexOf(Math.max(...weekdayCounts));
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const mostActiveWeekday = weekdayCounts[mostActiveIdx] > 0 ? weekdayNames[mostActiveIdx] : null;
+
+    // Activity feed — last 20 completions
+    const memberUserMap = Object.fromEntries(members.map(m => [m.userId, m.user]));
+    const activityFeed = allCompletions.slice(0, 20).map(c => ({
+      userId: c.userId,
+      userName: memberUserMap[c.userId]?.name || 'Member',
+      userAvatar: memberUserMap[c.userId]?.avatar || null,
+      taskId: c.taskId,
+      taskTitle: c.task?.title || 'Task',
+      taskColor: c.task?.color || null,
+      completedAt: c.createdAt,
+      date: dateKey(c.date),
+      proofUrl: c.proofUrl || null
+    }));
+
+    res.json({
+      days,
+      groupPulse: { todayAvg, weekAvg, weekCompletions, mostActiveWeekday },
+      members: memberAnalytics,
+      activityFeed
+    });
+  } catch (error) { next(error); }
+}
+
 async function getLeaderboard(req, res, next) {
   try {
     const { period = 'week' } = req.query;
@@ -303,4 +439,4 @@ async function updateGroup(req, res, next) {
   }
 }
 
-module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole };
+module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole, getAnalytics };

@@ -235,6 +235,45 @@ async function getDashboard(req, res, next) {
   } catch (error) { next(error); }
 }
 
+async function getWeek(req, res, next) {
+  try {
+    const end = parseToday(req.query.endDate);
+    const start = new Date(end); start.setDate(start.getDate() - 6);
+    const dayAfterEnd = new Date(end); dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1);
+
+    const tasks = await taskQ.findActiveTasksByUser(req.user.id);
+    const completions = await statsQ.findCompletionsByUserAndDateRange(req.user.id, start, dayAfterEnd);
+    const byDate = {};
+    completions.forEach(c => {
+      const dk = c.date.toISOString().split('T')[0];
+      if (!byDate[dk]) byDate[dk] = new Set();
+      byDate[dk].add(c.taskId);
+    });
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i);
+      const dk = d.toISOString().split('T')[0];
+      const applicable = getApplicableTasks(tasks, d);
+      const completed = byDate[dk] || new Set();
+      const weight = applicable.reduce((s, t) => s + t.weightage, 0);
+      const doneWeight = computeDayScore(applicable, completed);
+      const tasksDetail = applicable.map(t => ({
+        id: t.id, title: t.title, color: t.color, weightage: t.weightage,
+        completed: completed.has(t.id)
+      }));
+      days.push({
+        date: dk,
+        score: weight > 0 ? Math.round((doneWeight / weight) * 100) : 0,
+        totalTasks: applicable.length,
+        completedTasks: completed.size,
+        tasks: tasksDetail
+      });
+    }
+    res.json({ days, endDate: end.toISOString().split('T')[0] });
+  } catch (error) { next(error); }
+}
+
 async function getRankings(req, res, next) {
   try {
     const today = parseToday(req.query.date);
@@ -285,4 +324,4 @@ async function getRankings(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { getDaily, getStreak, getOverview, getDashboard, getRankings };
+module.exports = { getDaily, getStreak, getOverview, getDashboard, getRankings, getWeek };

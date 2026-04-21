@@ -327,10 +327,9 @@ export default function ProfilePage() {
         <div>
           <label className="block text-sm font-medium mb-2 text-muted">Date of Birth</label>
           {isEditing ? (
-            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
+            <DatePicker value={dob} onChange={setDob} />
           ) : (
-            <div className="px-4 py-3 rounded-xl glass-card">{dob ? new Date(dob + 'T12:00:00').toLocaleDateString() : <span className="text-muted">Not set</span>}</div>
+            <div className="px-4 py-3 rounded-xl glass-card">{dob ? new Date(dob + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : <span className="text-muted">Not set</span>}</div>
           )}
         </div>
 
@@ -392,4 +391,176 @@ export default function ProfilePage() {
       </div>
     </div>
   );
+}
+
+const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function DatePicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const parsed = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + 'T12:00:00') : null;
+  const [viewDate, setViewDate] = useState(parsed || new Date());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  useEffect(() => {
+    if (open && parsed) setViewDate(parsed);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const cells = [];
+  for (let i = firstDay - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, month: month - 1, year: month === 0 ? year - 1 : year, otherMonth: true });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, month, year, otherMonth: false });
+  while (cells.length % 7 !== 0) {
+    const d = cells.length - firstDay - daysInMonth + 1;
+    cells.push({ day: d, month: month + 1, year: month === 11 ? year + 1 : year, otherMonth: true });
+  }
+
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const displayValue = parsed
+    ? parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  const shiftMonth = (delta) => {
+    const d = new Date(viewDate); d.setMonth(d.getMonth() + delta);
+    setViewDate(d);
+  };
+
+  const now = new Date();
+  const years = [];
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 100; y--) years.push(y);
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(!open)}
+        className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500 transition-colors text-left',
+          open && 'border-brand-500')}>
+        <Calendar className="w-4 h-4 text-muted shrink-0" />
+        <span className={cn('flex-1', !displayValue && 'text-muted')}>
+          {displayValue || 'Select your date of birth'}
+        </span>
+        {value && (
+          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onChange(''); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onChange(''); } }}
+            className="p-1 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 sm:right-auto sm:w-80 mt-2 p-4 rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl z-20 animate-scale-in">
+            {/* Header: month/year pickers + prev/next */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}
+                  className="px-2 py-1 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm font-semibold">
+                  {MONTHS_LONG[month]}
+                </button>
+                <button type="button" onClick={() => { setShowYearPicker(!showYearPicker); setShowMonthPicker(false); }}
+                  className="px-2 py-1 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm font-semibold">
+                  {year}
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => shiftMonth(-1)} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted">
+                  <ChevronLeftSvg />
+                </button>
+                <button type="button" onClick={() => shiftMonth(1)} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted">
+                  <ChevronRightSvg />
+                </button>
+              </div>
+            </div>
+
+            {showMonthPicker && (
+              <div className="grid grid-cols-3 gap-1.5 mb-3">
+                {MONTHS_LONG.map((m, i) => (
+                  <button key={m} type="button" onClick={() => { const d = new Date(viewDate); d.setMonth(i); setViewDate(d); setShowMonthPicker(false); }}
+                    className={cn('px-2 py-2 rounded-lg text-sm', i === month ? 'bg-brand-500 text-white font-semibold' : 'hover:bg-[var(--card-bg-hover)]')}>
+                    {m.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showYearPicker && (
+              <div className="grid grid-cols-4 gap-1.5 mb-3 max-h-56 overflow-y-auto">
+                {years.map(y => (
+                  <button key={y} type="button" onClick={() => { const d = new Date(viewDate); d.setFullYear(y); setViewDate(d); setShowYearPicker(false); }}
+                    className={cn('px-2 py-2 rounded-lg text-sm', y === year ? 'bg-brand-500 text-white font-semibold' : 'hover:bg-[var(--card-bg-hover)]')}>
+                    {y}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!showMonthPicker && !showYearPicker && (
+              <>
+                {/* Weekday labels */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {WEEKDAYS_SHORT.map(d => (
+                    <div key={d} className="text-center text-[11px] font-semibold text-muted py-1">{d}</div>
+                  ))}
+                </div>
+                {/* Day grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {cells.map((c, i) => {
+                    const cellDate = new Date(c.year, c.month, c.day);
+                    cellDate.setHours(0, 0, 0, 0);
+                    const key = fmt(cellDate);
+                    const isSelected = key === value;
+                    const isToday = cellDate.getTime() === today.getTime();
+                    const isFuture = cellDate > today;
+                    return (
+                      <button key={i} type="button" disabled={isFuture}
+                        onClick={() => { onChange(key); setOpen(false); }}
+                        className={cn(
+                          'h-9 rounded-lg text-sm font-medium transition-colors',
+                          isSelected ? 'bg-brand-500 text-white shadow-md' :
+                          isFuture ? 'text-muted opacity-30 cursor-not-allowed' :
+                          c.otherMonth ? 'text-muted hover:bg-[var(--card-bg-hover)]' :
+                          isToday ? 'bg-brand-500/10 text-brand-500 font-bold hover:bg-[var(--card-bg-hover)]' :
+                          'hover:bg-[var(--card-bg-hover)]'
+                        )}>
+                        {c.day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--card-border)]">
+              <button type="button" onClick={() => { onChange(''); setOpen(false); }} className="text-xs text-muted hover:text-primary">Clear</button>
+              <button type="button" onClick={() => setViewDate(new Date())} className="text-xs text-brand-500 hover:underline font-semibold">Today</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ChevronLeftSvg() {
+  return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+}
+
+function ChevronRightSvg() {
+  return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 }

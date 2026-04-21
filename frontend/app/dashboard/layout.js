@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Flame, Zap, Menu, X, Sun, Moon, User, Bell, Check, CheckCheck } from 'lucide-react';
+import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Zap, Menu, X, Sun, Moon, User, Bell, Check, CheckCheck } from 'lucide-react';
 import { cn, getLevel } from '@/lib/utils';
 
 const navItems = [
@@ -28,7 +28,6 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [groups, setGroups] = useState([]);
-  const [streak, setStreak] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -49,7 +48,6 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     if (isAuthenticated) {
       api.getGroups().then(res => setGroups(res.groups || [])).catch(() => {});
-      api.getStreak().then(res => setStreak(res.currentStreak || 0)).catch(() => {});
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 60000); // poll every minute
       return () => clearInterval(interval);
@@ -69,17 +67,17 @@ export default function DashboardLayout({ children }) {
 
   const lvl = getLevel(user?.totalXp || 0);
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ mobile = false } = {}) => (
     <>
       {/* Logo */}
       <div className="h-16 px-5 flex items-center justify-between border-b border-[var(--card-border)]">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center">
+        <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center shrink-0">
             <Target className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-primary">HabitSquad</span>
+          <span className="font-bold text-lg text-primary truncate">HabitSquad</span>
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => setShowNotifications(true)} className="relative p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
@@ -89,6 +87,11 @@ export default function DashboardLayout({ children }) {
           <button onClick={toggleTheme} className="p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
+          {mobile && (
+            <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl hover:bg-[var(--card-bg-hover)] text-muted transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -156,17 +159,6 @@ export default function DashboardLayout({ children }) {
         )}
       </nav>
 
-      {/* Streak */}
-      <div className="p-4">
-        <div className="p-4 rounded-2xl glass-card bg-gradient-to-br from-orange-500/10 to-red-500/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Flame className="w-5 h-5 text-orange-400" />
-            <span className="text-sm font-medium text-orange-400">Streak</span>
-          </div>
-          <p className="text-2xl font-black text-primary">{streak} <span className="text-sm font-normal text-muted">days</span></p>
-        </div>
-      </div>
-
       {/* Logout */}
       <div className="p-4 pt-0">
         <button onClick={() => { logout(); router.push('/'); }}
@@ -206,10 +198,7 @@ export default function DashboardLayout({ children }) {
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 glass-sidebar flex flex-col animate-slide-in-left">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-[var(--card-bg)] text-muted">
-              <X className="w-5 h-5" />
-            </button>
-            <SidebarContent />
+            <SidebarContent mobile />
           </aside>
         </div>
       )}

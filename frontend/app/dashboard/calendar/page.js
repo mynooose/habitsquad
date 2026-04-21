@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera } from 'lucide-react';
 // Link still used for group name links
@@ -11,10 +12,23 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  return (
+    <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}>
+      <CalendarContent />
+    </Suspense>
+  );
+}
+
+function CalendarContent() {
+  const searchParams = useSearchParams();
+  const initialDateParam = searchParams.get('date');
+  const initialDate = initialDateParam && /^\d{4}-\d{2}-\d{2}$/.test(initialDateParam)
+    ? new Date(initialDateParam + 'T12:00:00')
+    : new Date();
+  const [currentDate, setCurrentDate] = useState(initialDate);
   const [calendarData, setCalendarData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(getDateKey(new Date()));
+  const [selectedDate, setSelectedDate] = useState(getDateKey(initialDate));
   const [completing, setCompleting] = useState(null);
 
   const year = currentDate.getFullYear();

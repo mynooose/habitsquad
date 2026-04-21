@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, Activity, Flame } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
@@ -42,6 +42,9 @@ export default function GroupDetailPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [memberMenuFor, setMemberMenuFor] = useState(null);
   const [transferTo, setTransferTo] = useState('');
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [expandedAnalyticsMember, setExpandedAnalyticsMember] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const [completing, setCompleting] = useState(null);
 
@@ -67,6 +70,15 @@ export default function GroupDetailPage() {
   }, [groupId, period, router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (tab !== 'analytics' || !groupId) return;
+    let cancelled = false;
+    setAnalyticsLoading(true);
+    api.getGroupAnalytics(groupId, 30).then(res => { if (!cancelled) setAnalytics(res); })
+      .catch(() => {}).finally(() => { if (!cancelled) setAnalyticsLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, groupId]);
 
   const copyCode = () => {
     navigator.clipboard.writeText(group?.inviteCode || '');
@@ -215,7 +227,7 @@ export default function GroupDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
-        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'members', label: 'Members', icon: Users }].map(t => (
+        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
@@ -371,6 +383,17 @@ export default function GroupDetailPage() {
             })}
           </div>
         </div>
+      )}
+
+      {/* Analytics Tab */}
+      {tab === 'analytics' && (
+        <AnalyticsTab
+          analytics={analytics}
+          loading={analyticsLoading}
+          currentUserId={user?.id}
+          expandedMember={expandedAnalyticsMember}
+          setExpandedMember={setExpandedAnalyticsMember}
+        />
       )}
 
       {/* Members Tab */}
@@ -734,6 +757,218 @@ function SettingsModal({ group, onClose, onSaved }) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setExpandedMember }) {
+  if (loading && !analytics) {
+    return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+  }
+  if (!analytics) return null;
+
+  const { groupPulse, members, activityFeed, days } = analytics;
+  const streakLeaders = [...members].sort((a, b) => b.showUpStreak.current - a.showUpStreak.current).slice(0, 3);
+
+  return (
+    <div className="space-y-6">
+      {/* Group Pulse */}
+      <div>
+        <h2 className="font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Group Pulse</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-4 rounded-2xl glass-card">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">Today avg</p>
+            <p className="text-2xl font-black text-primary">{groupPulse.todayAvg}%</p>
+          </div>
+          <div className="p-4 rounded-2xl glass-card">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">7-day avg</p>
+            <p className="text-2xl font-black text-primary">{groupPulse.weekAvg}%</p>
+          </div>
+          <div className="p-4 rounded-2xl glass-card">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">Week completions</p>
+            <p className="text-2xl font-black text-primary">{groupPulse.weekCompletions}</p>
+          </div>
+          <div className="p-4 rounded-2xl glass-card">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">Most active</p>
+            <p className="text-lg font-bold text-primary">{groupPulse.mostActiveWeekday || '—'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Top streakers */}
+      {streakLeaders.some(m => m.showUpStreak.current > 0) && (
+        <div>
+          <h2 className="font-semibold mb-3 flex items-center gap-2"><Flame className="w-4 h-4 text-orange-400" /> Top Show-up Streaks</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {streakLeaders.map((m, i) => (
+              <div key={m.user.id} className={cn('p-3 rounded-2xl glass-card flex items-center gap-3',
+                i === 0 && 'bg-gradient-to-br from-yellow-500/15 to-amber-500/10 border-yellow-500/30')}>
+                {m.user.avatar ? (
+                  <img src={m.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-bold">{getInitials(m.user.name)}</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{m.user.id === currentUserId ? 'You' : m.user.name}</p>
+                  <p className="text-xs text-muted">{m.showUpStreak.current} day{m.showUpStreak.current === 1 ? '' : 's'} in a row</p>
+                </div>
+                {i === 0 && <Crown className="w-5 h-5 text-yellow-500" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Per-member history */}
+      <div>
+        <h2 className="font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Member History <span className="text-xs text-muted font-normal">(last {days} days)</span></h2>
+        <div className="space-y-3">
+          {[...members].sort((a, b) => (a.user.id === currentUserId ? -1 : b.user.id === currentUserId ? 1 : b.totalXp - a.totalXp)).map(m => {
+            const isMe = m.user.id === currentUserId;
+            const isOpen = expandedMember === m.user.id;
+            const lvl = getLevel(m.totalXp || 0);
+            return (
+              <div key={m.user.id} className="rounded-2xl glass-card overflow-hidden">
+                <button onClick={() => setExpandedMember(isOpen ? null : m.user.id)}
+                  className="w-full flex items-center gap-3 p-4 hover:bg-[var(--card-bg-hover)] transition-colors">
+                  {m.user.avatar ? (
+                    <img src={m.user.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-bold">{getInitials(m.user.name)}</div>
+                  )}
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-semibold flex items-center gap-2">
+                      <span className="truncate">{isMe ? 'You' : m.user.name}</span>
+                      {m.role === 'ADMIN' && <Crown className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
+                      <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--card-bg-hover)]', lvl.color)}>Lv.{lvl.level}</span>
+                    </p>
+                    <p className="text-xs text-muted">
+                      {m.totalCompletions} completions · Streak {m.showUpStreak.current}d
+                      {m.topHabit && <> · Top: <span className="font-medium">{m.topHabit.title}</span></>}
+                    </p>
+                  </div>
+                  {/* Mini 30-day heatmap always visible */}
+                  <div className="hidden md:grid gap-0.5 shrink-0" style={{ gridTemplateColumns: `repeat(${Math.min(m.history.length, 30)}, 6px)` }}>
+                    {m.history.slice(-30).map(h => (
+                      <div key={h.date} title={`${h.date}: ${h.score}%`}
+                        className={cn('h-4 rounded-sm',
+                          h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                          h.score >= 80 ? 'bg-green-500' :
+                          h.score >= 50 ? 'bg-blue-500' :
+                          h.score > 0 ? 'bg-amber-500' :
+                          'bg-red-500/30'
+                        )} />
+                    ))}
+                  </div>
+                  {isOpen ? <ChevronDown className="w-4 h-4 text-muted shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted shrink-0" />}
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-[var(--card-border)] p-4 space-y-4">
+                    {/* 7-day bar chart */}
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted mb-2">Last 7 Days</p>
+                      <div className="flex items-end justify-between gap-1.5 h-16">
+                        {m.last7Days.map(d => {
+                          const date = new Date(d.date + 'T12:00:00');
+                          const label = date.toLocaleDateString('en-US', { weekday: 'narrow' });
+                          return (
+                            <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date}: ${d.completedCount}/${d.totalCount} · ${d.score}%`}>
+                              <div className="relative w-full flex items-end" style={{ height: '44px' }}>
+                                <div className={cn('w-full rounded-md',
+                                  d.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                                  d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400' :
+                                  d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400' :
+                                  d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400' :
+                                  'bg-red-500/30')}
+                                  style={{ height: `${Math.max(d.score, 4)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-semibold text-muted">{label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Stat chips */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                      <StatChip label="Streak" value={`${m.showUpStreak.current}d`} accent="text-orange-400" />
+                      <StatChip label="Longest" value={`${m.showUpStreak.longest}d`} />
+                      <StatChip label="Completions" value={m.totalCompletions} accent="text-green-400" />
+                      <StatChip label="XP" value={m.totalXp} accent="text-yellow-400" />
+                    </div>
+
+                    {/* Full heatmap (mobile) */}
+                    <div className="md:hidden">
+                      <p className="text-xs uppercase tracking-wider text-muted mb-2">{days}-day activity</p>
+                      <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${Math.min(m.history.length, days)}, 1fr)` }}>
+                        {m.history.map(h => (
+                          <div key={h.date} title={`${h.date}: ${h.score}%`}
+                            className={cn('h-3 rounded-sm',
+                              h.totalCount === 0 ? 'bg-[var(--card-bg-hover)]' :
+                              h.score >= 80 ? 'bg-green-500' :
+                              h.score >= 50 ? 'bg-blue-500' :
+                              h.score > 0 ? 'bg-amber-500' :
+                              'bg-red-500/30'
+                            )} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-3 mt-3 text-xs text-muted">
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-500" />≥80%</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
+        </div>
+      </div>
+
+      {/* Activity feed */}
+      <div>
+        <h2 className="font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Recent Activity</h2>
+        {activityFeed.length === 0 ? (
+          <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet.</div>
+        ) : (
+          <div className="rounded-2xl glass-card overflow-hidden">
+            {activityFeed.map((a, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 border-b border-[var(--card-border)] last:border-0">
+                {a.userAvatar ? (
+                  <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-xs font-bold shrink-0">{getInitials(a.userName)}</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">
+                    <span className="font-semibold">{a.userId === currentUserId ? 'You' : a.userName}</span>
+                    {' '}completed{' '}
+                    <span className="font-medium">{a.taskTitle}</span>
+                  </p>
+                  <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                </div>
+                {a.proofUrl && (
+                  <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
+                )}
+                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatChip({ label, value, accent }) {
+  return (
+    <div className="p-2 rounded-xl bg-[var(--card-bg-hover)]">
+      <p className="text-[10px] uppercase tracking-wider text-muted">{label}</p>
+      <p className={cn('font-bold text-sm', accent || 'text-primary')}>{value}</p>
     </div>
   );
 }

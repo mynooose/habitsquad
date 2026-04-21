@@ -2,13 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera, X, BarChart3, Info } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info } from 'lucide-react';
 import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS } from '@/lib/utils';
+
+function getLocalDateKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const [weekEnd, setWeekEnd] = useState(() => getLocalDateKey());
+  const [weekData, setWeekData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [groups, setGroups] = useState([]);
   const [dashStats, setDashStats] = useState(null);
@@ -38,6 +46,21 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getWeek(weekEnd).then(res => { if (!cancelled) setWeekData(res); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [weekEnd]);
+
+  const shiftWeek = (deltaDays) => {
+    const d = new Date(weekEnd + 'T12:00:00');
+    d.setDate(d.getDate() + deltaDays);
+    const todayKey = getLocalDateKey();
+    const newKey = getLocalDateKey(d);
+    setWeekEnd(newKey > todayKey ? todayKey : newKey);
+  };
+  const atToday = weekEnd === getLocalDateKey();
 
   const handleToggle = async (task, proofUrl = null) => {
     if (!task.completedToday && task.requiresProof && !proofUrl) {
@@ -116,7 +139,7 @@ export default function DashboardPage() {
       {/* Show-up Streak + 7-day activity */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         {/* Show-up Streak */}
-        <div className="p-5 rounded-[24px] soft-card bento-orange group relative">
+        <div className="p-5 rounded-[24px] soft-card bento-orange relative">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl gradient-orange flex items-center justify-center">
@@ -124,9 +147,9 @@ export default function DashboardPage() {
               </div>
               <span className="text-xs font-semibold text-muted uppercase tracking-wider">Show-up Streak</span>
             </div>
-            <div className="relative">
-              <Info className="w-4 h-4 text-muted opacity-60" />
-              <div className="absolute right-0 top-5 w-60 p-2.5 rounded-lg bg-[var(--card-bg-solid)] border border-[var(--card-border)] text-[11px] text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+            <div className="relative group/info">
+              <Info className="w-4 h-4 text-muted opacity-60 cursor-help" />
+              <div className="absolute right-0 top-6 w-60 p-2.5 rounded-lg bg-[var(--card-bg-solid)] border border-[var(--card-border)] text-[11px] text-muted opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
                 Days in a row you completed at least one task. Keep showing up — momentum matters more than perfection.
               </div>
             </div>
@@ -142,51 +165,93 @@ export default function DashboardPage() {
         </div>
 
         {/* 7-day activity chart */}
-        <div className="p-5 rounded-[24px] soft-card bento-blue">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xs font-semibold text-muted uppercase tracking-wider">Last 7 Days</span>
-            </div>
-            <span className="text-xs text-muted font-medium">{dashStats?.thisWeek?.avgScore || 0}% avg</span>
-          </div>
-          <div className="flex items-end justify-between gap-1.5 h-20 mb-2">
-            {(dashStats?.dailyData || []).map((d, i) => {
-              const isToday = i === (dashStats?.dailyData?.length || 0) - 1;
-              const dateObj = new Date(d.date + 'T12:00:00');
-              const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'narrow' });
-              return (
-                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group/bar">
-                  <div className="relative w-full flex items-end" style={{ height: '56px' }}>
-                    <div
-                      className={cn(
-                        'w-full rounded-md transition-all',
-                        d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400' :
-                        d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400' :
-                        d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400' :
-                        'bg-[var(--card-bg-hover)]',
-                        isToday && 'ring-2 ring-blue-400 ring-offset-1 ring-offset-[var(--card-bg)]'
-                      )}
-                      style={{ height: `${Math.max(d.score, 4)}%` }}
-                      title={`${d.date}: ${d.score}%`}
-                    />
+        {(() => {
+          const days = weekData?.days || [];
+          const weekAvg = days.length ? Math.round(days.reduce((s, d) => s + d.score, 0) / days.length) : 0;
+          return (
+            <div className="p-5 rounded-[24px] soft-card bento-blue">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-white" />
                   </div>
-                  <span className={cn('text-[10px] font-semibold', isToday ? 'text-blue-400' : 'text-muted')}>{dayLabel}</span>
+                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">7 Days</span>
                 </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-[var(--card-border)]">
-            <span>Best: <span className="font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span></span>
-            {dashStats?.weekDelta !== undefined && dashStats?.weekDelta !== 0 && (
-              <span className={cn('font-bold', dashStats.weekDelta > 0 ? 'text-green-400' : 'text-red-400')}>
-                {dashStats.weekDelta > 0 ? '+' : ''}{dashStats.weekDelta}% vs last week
-              </span>
-            )}
-          </div>
-        </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => shiftWeek(-7)} className="p-1 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted" title="Previous week">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-muted font-semibold min-w-[3.5rem] text-center">{weekAvg}% avg</span>
+                  <button onClick={() => shiftWeek(7)} disabled={atToday} className="p-1 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted disabled:opacity-30 disabled:cursor-not-allowed" title="Next week">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-end justify-between gap-1.5 h-20 mb-2">
+                {days.map((d) => {
+                  const todayKey = getLocalDateKey();
+                  const isToday = d.date === todayKey;
+                  const isFuture = d.date > todayKey;
+                  const dateObj = new Date(d.date + 'T12:00:00');
+                  const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'narrow' });
+                  const longLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1 relative group/bar">
+                      <div className="relative w-full flex items-end cursor-pointer" style={{ height: '56px' }}
+                        onClick={() => !isFuture && router.push(`/dashboard/calendar?date=${d.date}`)}>
+                        <div
+                          className={cn(
+                            'w-full rounded-md transition-all',
+                            isFuture ? 'bg-[var(--card-bg-hover)] opacity-40' :
+                            d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400 group-hover/bar:brightness-110' :
+                            d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400 group-hover/bar:brightness-110' :
+                            d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400 group-hover/bar:brightness-110' :
+                            'bg-[var(--card-bg-hover)] group-hover/bar:bg-[var(--card-bg-solid)]',
+                            isToday && 'ring-2 ring-blue-400 ring-offset-1 ring-offset-[var(--card-bg)]'
+                          )}
+                          style={{ height: `${Math.max(d.score, 4)}%` }}
+                        />
+                      </div>
+                      <span className={cn('text-[10px] font-semibold', isToday ? 'text-blue-400' : isFuture ? 'text-muted opacity-40' : 'text-muted')}>{dayLabel}</span>
+                      {/* Hover tooltip */}
+                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 min-w-[160px] p-2.5 rounded-lg bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-lg text-[11px] opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none z-20">
+                        <p className="font-semibold mb-1">{longLabel}{isToday && ' (today)'}</p>
+                        {isFuture ? (
+                          <p className="text-muted italic">Upcoming</p>
+                        ) : d.totalTasks === 0 ? (
+                          <p className="text-muted italic">No habits scheduled</p>
+                        ) : (
+                          <>
+                            <p className="text-muted mb-1.5">{d.completedTasks}/{d.totalTasks} done &middot; <span className="font-bold text-primary">{d.score}%</span></p>
+                            <div className="space-y-0.5 max-h-24 overflow-hidden">
+                              {(d.tasks || []).slice(0, 5).map(t => (
+                                <div key={t.id} className="flex items-center gap-1.5">
+                                  {t.completed ? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" /> : <Circle className="w-3 h-3 text-muted shrink-0" />}
+                                  <span className={cn('truncate', t.completed && 'text-muted line-through')}>{t.title}</span>
+                                </div>
+                              ))}
+                              {(d.tasks || []).length > 5 && <p className="text-muted italic">+{d.tasks.length - 5} more</p>}
+                            </div>
+                          </>
+                        )}
+                        <p className="text-muted italic mt-1.5 text-[10px]">Click for full day</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-[var(--card-border)]">
+                <span>Best: <span className="font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span></span>
+                {atToday && dashStats?.weekDelta !== undefined && dashStats?.weekDelta !== 0 && (
+                  <span className={cn('font-bold', dashStats.weekDelta > 0 ? 'text-green-400' : 'text-red-400')}>
+                    {dashStats.weekDelta > 0 ? '+' : ''}{dashStats.weekDelta}% vs last week
+                  </span>
+                )}
+                {!atToday && <span className="italic">{new Date(days[0]?.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(weekEnd + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Rankings */}
