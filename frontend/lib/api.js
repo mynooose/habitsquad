@@ -76,6 +76,16 @@ class ApiClient {
     this.setToken(null);
   }
 
+  async forgotPassword(email) {
+    return this.request('/auth/forgot-password', { method: 'POST', body: { email } });
+  }
+
+  async resetPassword(token, password) {
+    const data = await this.request('/auth/reset-password', { method: 'POST', body: { token, password } });
+    if (data.token) this.setToken(data.token);
+    return data;
+  }
+
   async getNotifications() {
     return this.request('/notifications');
   }
@@ -98,6 +108,12 @@ class ApiClient {
 
   async updateProfile(data) {
     return this.request('/auth/me', { method: 'PUT', body: data });
+  }
+
+  async deleteAccount() {
+    const res = await this.request('/auth/me', { method: 'DELETE' });
+    this.setToken(null);
+    return res;
   }
 
   // Tasks
@@ -209,6 +225,10 @@ class ApiClient {
     return this.request(`/stats/week?endDate=${ed}`);
   }
 
+  async getPersonalAnalytics(days = 30) {
+    return this.request(`/stats/personal-analytics?days=${days}&date=${this.getLocalDateKey()}`);
+  }
+
   async getDashboardRankings() {
     return this.request('/stats/rankings');
   }
@@ -219,6 +239,10 @@ class ApiClient {
 
   async getGroupAnalytics(groupId, days = 30) {
     return this.request(`/groups/${groupId}/analytics?days=${days}`);
+  }
+
+  async toggleReaction(completionId, emoji) {
+    return this.request(`/completions/${completionId}/reactions`, { method: 'POST', body: { emoji } });
   }
 
   async inviteToGroup(groupId, data) {

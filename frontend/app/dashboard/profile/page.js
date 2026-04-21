@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X, Sparkles, Flame, Shield, Swords, Medal, Star, Gem, Trophy, Crown, Lock } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X, Sparkles, Flame, Shield, Swords, Medal, Star, Gem, Trophy, Crown, Lock, Trash2 } from 'lucide-react';
 import { getLevel, LEVELS } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
@@ -54,12 +54,17 @@ export default function ProfilePage() {
   const [gender, setGender] = useState('');
   const [bio, setBio] = useState('');
   const [dailyEmail, setDailyEmail] = useState(false);
+  const [dailyEmailTime, setDailyEmailTime] = useState('07:00');
+  const [timezone, setTimezone] = useState('UTC');
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showAvatars, setShowAvatars] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showLevels, setShowLevels] = useState(false);
   const [originalData, setOriginalData] = useState(null);
 
   useEffect(() => {
+    const browserTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return 'UTC'; } })();
     api.getMe().then(({ user: u }) => {
       const data = {
         name: u.name || '',
@@ -68,6 +73,8 @@ export default function ProfilePage() {
         gender: u.gender || '',
         bio: u.bio || '',
         dailyEmail: u.dailyEmailEnabled || false,
+        dailyEmailTime: u.dailyEmailTime || '07:00',
+        timezone: u.timezone || browserTz,
       };
       setName(data.name);
       setAvatar(data.avatar);
@@ -75,6 +82,8 @@ export default function ProfilePage() {
       setGender(data.gender);
       setBio(data.bio);
       setDailyEmail(data.dailyEmail);
+      setDailyEmailTime(data.dailyEmailTime);
+      setTimezone(data.timezone);
       setOriginalData(data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -87,6 +96,8 @@ export default function ProfilePage() {
       setGender(originalData.gender);
       setBio(originalData.bio);
       setDailyEmail(originalData.dailyEmail);
+      setDailyEmailTime(originalData.dailyEmailTime);
+      setTimezone(originalData.timezone);
     }
     setIsEditing(false);
     setError('');
@@ -107,9 +118,11 @@ export default function ProfilePage() {
         gender: gender || null,
         bio: bio.trim() || null,
         dailyEmailEnabled: dailyEmail,
+        dailyEmailTime,
+        timezone,
       });
       await checkAuth();
-      setOriginalData({ name: name.trim(), avatar, dob, gender, bio: bio.trim(), dailyEmail });
+      setOriginalData({ name: name.trim(), avatar, dob, gender, bio: bio.trim(), dailyEmail, dailyEmailTime, timezone });
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -117,6 +130,17 @@ export default function ProfilePage() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteAccount();
+      router.push('/');
+    } catch (err) {
+      setError(err.message || 'Failed to delete account');
+      setDeleting(false);
     }
   };
 
@@ -364,17 +388,34 @@ export default function ProfilePage() {
         </div>
 
         {/* Daily Email Notification */}
-        <div className="flex items-center justify-between p-4 rounded-xl glass-card">
-          <div>
-            <p className="font-medium flex items-center gap-2">
-              <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
-            </p>
-            <p className="text-sm text-muted">Get your planned tasks emailed every day at 7:00 AM</p>
+        <div className="p-4 rounded-xl glass-card space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium flex items-center gap-2">
+                <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
+              </p>
+              <p className="text-sm text-muted">Get your planned tasks emailed each morning</p>
+            </div>
+            <button type="button" disabled={!isEditing} onClick={() => setDailyEmail(!dailyEmail)}
+              className={cn('w-12 h-7 rounded-full transition-colors relative disabled:opacity-60', dailyEmail ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10')}>
+              <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
+            </button>
           </div>
-          <button type="button" disabled={!isEditing} onClick={() => setDailyEmail(!dailyEmail)}
-            className={cn('w-12 h-7 rounded-full transition-colors relative disabled:opacity-60', dailyEmail ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10')}>
-            <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
-          </button>
+          {dailyEmail && (
+            <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
+              <Clock className="w-4 h-4 text-muted shrink-0" />
+              <span className="text-sm text-muted">Send at</span>
+              {isEditing ? (
+                <>
+                  <input type="time" step="3600" value={dailyEmailTime} onChange={(e) => setDailyEmailTime(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500 text-sm" />
+                  <span className="text-xs text-muted">in {timezone}</span>
+                </>
+              ) : (
+                <span className="text-sm font-medium">{dailyEmailTime} <span className="text-muted font-normal">({timezone})</span></span>
+              )}
+            </div>
+          )}
         </div>
 
         {isEditing && (
@@ -388,6 +429,27 @@ export default function ProfilePage() {
             </button>
           </div>
         )}
+
+        {/* Danger zone */}
+        <div className="mt-8 pt-6 border-t border-[var(--card-border)]">
+          <p className="text-xs font-semibold uppercase tracking-wider text-red-400 mb-3">Danger zone</p>
+          {showDelete ? (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+              <p className="text-sm mb-2 font-medium">Delete your account?</p>
+              <p className="text-xs text-muted mb-4">Your habits, completions, and memberships will be hidden from the app. You won't be able to sign in again. This cannot be undone from the app.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowDelete(false)} disabled={deleting} className="flex-1 py-2 rounded-lg bg-[var(--card-bg)] text-sm font-medium">Cancel</button>
+                <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete permanently'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowDelete(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 text-sm">
+              <Trash2 className="w-4 h-4" /> Delete account
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

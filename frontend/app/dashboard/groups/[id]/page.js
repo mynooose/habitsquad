@@ -389,6 +389,7 @@ export default function GroupDetailPage() {
       {tab === 'analytics' && (
         <AnalyticsTab
           analytics={analytics}
+          setAnalytics={setAnalytics}
           loading={analyticsLoading}
           currentUserId={user?.id}
           expandedMember={expandedAnalyticsMember}
@@ -761,7 +762,41 @@ function SettingsModal({ group, onClose, onSaved }) {
   );
 }
 
-function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setExpandedMember }) {
+const REACTION_EMOJIS = ['🎉', '💪', '🔥', '❤️', '👏'];
+
+function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expandedMember, setExpandedMember }) {
+  const [pickerFor, setPickerFor] = useState(null);
+
+  const applyLocalReaction = (completionId, emoji) => {
+    setAnalytics(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        activityFeed: prev.activityFeed.map(a => {
+          if (a.completionId !== completionId) return a;
+          const my = new Set(a.myReactions || []);
+          const counts = { ...(a.reactions || {}) };
+          if (my.has(emoji)) {
+            my.delete(emoji);
+            counts[emoji] = Math.max(0, (counts[emoji] || 1) - 1);
+            if (counts[emoji] === 0) delete counts[emoji];
+          } else {
+            my.add(emoji);
+            counts[emoji] = (counts[emoji] || 0) + 1;
+          }
+          return { ...a, reactions: counts, myReactions: Array.from(my) };
+        })
+      };
+    });
+  };
+
+  const toggleReaction = async (completionId, emoji) => {
+    applyLocalReaction(completionId, emoji);
+    setPickerFor(null);
+    try { await api.toggleReaction(completionId, emoji); }
+    catch { applyLocalReaction(completionId, emoji); } // revert
+  };
+
   if (loading && !analytics) {
     return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
   }
@@ -936,27 +971,72 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
           <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet.</div>
         ) : (
           <div className="rounded-2xl glass-card overflow-hidden">
-            {activityFeed.map((a, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 border-b border-[var(--card-border)] last:border-0">
-                {a.userAvatar ? (
-                  <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-xs font-bold shrink-0">{getInitials(a.userName)}</div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm">
-                    <span className="font-semibold">{a.userId === currentUserId ? 'You' : a.userName}</span>
-                    {' '}completed{' '}
-                    <span className="font-medium">{a.taskTitle}</span>
-                  </p>
-                  <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            {activityFeed.map((a) => {
+              const activeReactions = Object.entries(a.reactions || {}).filter(([, n]) => n > 0);
+              const isMine = a.userId === currentUserId;
+              return (
+                <div key={a.completionId} className="p-3 border-b border-[var(--card-border)] last:border-0">
+                  <div className="flex items-center gap-3">
+                    {a.userAvatar ? (
+                      <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-xs font-bold shrink-0">{getInitials(a.userName)}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <span className="font-semibold">{isMine ? 'You' : a.userName}</span>
+                        {' '}completed{' '}
+                        <span className="font-medium">{a.taskTitle}</span>
+                      </p>
+                      <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    </div>
+                    {a.proofUrl && (
+                      <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
+                    )}
+                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 ml-12 flex-wrap">
+                    {activeReactions.map(([emoji, count]) => {
+                      const mine = (a.myReactions || []).includes(emoji);
+                      return (
+                        <button key={emoji} type="button"
+                          disabled={isMine}
+                          onClick={() => !isMine && toggleReaction(a.completionId, emoji)}
+                          className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
+                            mine ? 'bg-brand-500/15 border border-brand-500/40 text-brand-500' : 'bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)]',
+                            isMine && 'cursor-default')}>
+                          <span>{emoji}</span><span className="tabular-nums">{count}</span>
+                        </button>
+                      );
+                    })}
+                    {!isMine && (
+                      <div className="relative">
+                        <button type="button" onClick={() => setPickerFor(pickerFor === a.completionId ? null : a.completionId)}
+                          className="px-2 py-0.5 rounded-full text-xs bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)] text-muted">
+                          +
+                        </button>
+                        {pickerFor === a.completionId && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setPickerFor(null)} />
+                            <div className="absolute left-0 top-7 z-20 flex items-center gap-1 p-1.5 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
+                              {REACTION_EMOJIS.map(e => {
+                                const mine = (a.myReactions || []).includes(e);
+                                return (
+                                  <button key={e} type="button" onClick={() => toggleReaction(a.completionId, e)}
+                                    className={cn('w-9 h-9 rounded-lg text-lg transition-transform hover:scale-125', mine && 'bg-brand-500/15')}>
+                                    {e}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {a.proofUrl && (
-                  <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
-                )}
-                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

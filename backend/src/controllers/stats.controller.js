@@ -235,6 +235,105 @@ async function getDashboard(req, res, next) {
   } catch (error) { next(error); }
 }
 
+async function getPersonalAnalytics(req, res, next) {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 7), 90);
+    const now = parseToday(req.query.date);
+    const tomorrow = new Date(now); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const startDate = new Date(now); startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+
+    const [tasks, completions] = await Promise.all([
+      prisma.task.findMany({ where: { userId: req.user.id } }),
+      prisma.taskCompletion.findMany({
+        where: { userId: req.user.id, date: { gte: startDate, lt: tomorrow } },
+        include: { task: { select: { id: true, title: true, color: true, groupId: true } } },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
+
+    const active = tasks.filter(t => t.isActive);
+    const dateKey = (d) => d.toISOString().split('T')[0];
+    const byDate = {};
+    completions.forEach(c => {
+      const dk = dateKey(c.date);
+      if (!byDate[dk]) byDate[dk] = new Set();
+      byDate[dk].add(c.taskId);
+    });
+
+    const history = [];
+    const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate); d.setUTCDate(d.getUTCDate() + i);
+      const dk = dateKey(d);
+      const applicable = getApplicableTasks(active, d);
+      const completed = byDate[dk] || new Set();
+      const weight = applicable.reduce((s, t) => s + t.weightage, 0);
+      const done = computeDayScore(applicable, completed);
+      const score = weight > 0 ? Math.round((done / weight) * 100) : 0;
+      history.push({ date: dk, score, completedCount: completed.size, totalCount: applicable.length });
+      weekdayCounts[d.getUTCDay()] += completed.size;
+    }
+
+    // Streaks
+    let showUpCurrent = 0, showUpLongest = 0, temp = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i];
+      if (h.completedCount > 0) { temp++; if (i === history.length - 1 || showUpCurrent > 0) showUpCurrent = temp; }
+      else if (i < history.length - 1) break;
+    }
+    temp = 0;
+    for (const h of history) {
+      if (h.completedCount > 0) { temp++; showUpLongest = Math.max(showUpLongest, temp); }
+      else temp = 0;
+    }
+
+    // Per-habit breakdown: completion rate over the window for each active task
+    const habitCompletions = {};
+    completions.forEach(c => { habitCompletions[c.taskId] = (habitCompletions[c.taskId] || 0) + 1; });
+
+    const habitBreakdown = active.map(t => {
+      // Count how many days this task was applicable within the window
+      let applicableDays = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(startDate); d.setUTCDate(d.getUTCDate() + i);
+        const applicable = getApplicableTasks([t], d);
+        if (applicable.length > 0) applicableDays++;
+      }
+      const done = habitCompletions[t.id] || 0;
+      return {
+        id: t.id, title: t.title, color: t.color, groupId: t.groupId,
+        completions: done,
+        applicableDays,
+        completionRate: applicableDays > 0 ? Math.round((done / applicableDays) * 100) : 0
+      };
+    }).sort((a, b) => b.completions - a.completions);
+
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const mostActiveIdx = weekdayCounts.indexOf(Math.max(...weekdayCounts));
+    const weekdayBreakdown = weekdayCounts.map((count, i) => ({ day: weekdayNames[i], count }));
+
+    const weekAvg = history.length >= 7
+      ? Math.round(history.slice(-7).reduce((s, h) => s + h.score, 0) / 7)
+      : 0;
+    const windowAvg = Math.round(history.reduce((s, h) => s + h.score, 0) / history.length);
+    const bestDay = history.reduce((best, h) => h.score > best.score ? h : best, { score: 0, date: null });
+
+    res.json({
+      days,
+      history,
+      showUpStreak: { current: showUpCurrent, longest: showUpLongest },
+      todayScore: history[history.length - 1]?.score || 0,
+      weekAvg,
+      windowAvg,
+      totalCompletions: completions.length,
+      habitBreakdown,
+      weekdayBreakdown,
+      mostActiveWeekday: weekdayCounts[mostActiveIdx] > 0 ? weekdayNames[mostActiveIdx] : null,
+      bestDay: bestDay.score > 0 ? bestDay : null
+    });
+  } catch (error) { next(error); }
+}
+
 async function getWeek(req, res, next) {
   try {
     const end = parseToday(req.query.endDate);
@@ -324,4 +423,4 @@ async function getRankings(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { getDaily, getStreak, getOverview, getDashboard, getRankings, getWeek };
+module.exports = { getDaily, getStreak, getOverview, getDashboard, getRankings, getWeek, getPersonalAnalytics };

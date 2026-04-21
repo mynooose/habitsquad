@@ -8,7 +8,10 @@ router.post('/register', ctrl.register);
 router.post('/login', ctrl.login);
 router.get('/verify', ctrl.verifyEmail);
 router.post('/resend-verification', ctrl.resendVerification);
+router.post('/forgot-password', ctrl.forgotPassword);
+router.post('/reset-password', ctrl.resetPassword);
 router.get('/me', authenticate, ctrl.getMe);
 router.put('/me', authenticate, ctrl.updateMe);
+router.delete('/me', authenticate, ctrl.deleteAccount);
 
 module.exports = router;

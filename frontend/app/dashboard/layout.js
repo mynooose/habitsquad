@@ -6,18 +6,20 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import api from '@/lib/api';
-import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Zap, Menu, X, Sun, Moon, User, Bell, Check, CheckCheck } from 'lucide-react';
+import { Target, LayoutDashboard, Calendar, Users, LogOut, Plus, ChevronRight, Zap, Menu, X, Sun, Moon, User, Bell, Check, CheckCheck, BarChart3 } from 'lucide-react';
 import { cn, getLevel } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/dashboard/groups', icon: Users, label: 'Groups' },
 ];
 
 const mobileNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { href: '/dashboard/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/dashboard/analytics', icon: BarChart3, label: 'Stats' },
   { href: '/dashboard/groups', icon: Users, label: 'Groups' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
 ];
@@ -46,6 +48,14 @@ export default function DashboardLayout({ children }) {
   }, [loading, isAuthenticated, router]);
 
   useEffect(() => {
+    // Only route brand-new users (never earned XP) to onboarding.
+    // Existing users without the onboardedAt field still skip it.
+    if (!loading && isAuthenticated && user && !user.onboardedAt && (user.totalXp || 0) === 0 && pathname !== '/dashboard/onboarding') {
+      router.push('/dashboard/onboarding');
+    }
+  }, [loading, isAuthenticated, user, pathname, router]);
+
+  useEffect(() => {
     if (isAuthenticated) {
       api.getGroups().then(res => setGroups(res.groups || [])).catch(() => {});
       fetchNotifications();
@@ -63,6 +73,11 @@ export default function DashboardLayout({ children }) {
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
+  }
+
+  // First-run onboarding renders chrome-less
+  if (pathname === '/dashboard/onboarding') {
+    return <main className="min-h-screen bg-page">{children}</main>;
   }
 
   const lvl = getLevel(user?.totalXp || 0);

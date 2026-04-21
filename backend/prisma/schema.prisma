@@ -21,6 +21,11 @@ model User {
   emailVerified     Boolean  @default(false)
   verifyToken       String?  @unique
   timezone          String   @default("UTC")
+  resetToken        String?  @unique
+  resetTokenExpiry  DateTime?
+  dailyEmailTime    String   @default("07:00")
+  onboardedAt       DateTime?
+  deletedAt         DateTime?
   createdAt         DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -30,6 +35,7 @@ model User {
   createdGroups Group[]
   sentInvites   GroupInvite[]    @relation("InviteSender")
   notifications Notification[]
+  reactions     Reaction[]
 
   @@map("users")
 }
@@ -97,6 +103,8 @@ model TaskCompletion {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reactions Reaction[]
 
   @@unique([taskId, date])
   @@map("task_completions")
@@ -166,4 +174,18 @@ enum InviteStatus {
   ACCEPTED
   DECLINED
   EXPIRED
+}
+
+model Reaction {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completionId String
+  completion   TaskCompletion @relation(fields: [completionId], references: [id], onDelete: Cascade)
+  emoji        String
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, completionId, emoji])
+  @@index([completionId])
+  @@map("reactions")
 }

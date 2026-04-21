@@ -18,7 +18,8 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await api.request('/auth/register', { method: 'POST', body: { email, password, name } });
+      const timezone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return 'UTC'; } })();
+      await api.request('/auth/register', { method: 'POST', body: { email, password, name, timezone } });
       setRegistered(true);
     } catch (err) {
       setError(err.message || 'Failed to create account');

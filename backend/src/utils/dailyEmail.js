@@ -41,26 +41,45 @@ function buildTasksHtml(tasks, groups) {
   return html;
 }
 
+// Returns the current HH (0-23) in the given IANA timezone, or null if tz invalid.
+function currentHourInTimezone(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false }).formatToParts(new Date());
+    const h = parts.find(p => p.type === 'hour');
+    return h ? parseInt(h.value, 10) % 24 : null;
+  } catch { return null; }
+}
+
 async function sendDailyEmails() {
-  console.log(`[${new Date().toISOString()}] Running daily email job...`);
+  const runTs = new Date().toISOString();
+  console.log(`[${runTs}] Running hourly daily-email job...`);
 
   try {
     const users = await prisma.user.findMany({
-      where: { dailyEmailEnabled: true },
-      select: { id: true, email: true, name: true }
+      where: { dailyEmailEnabled: true, deletedAt: null },
+      select: { id: true, email: true, name: true, timezone: true, dailyEmailTime: true }
     });
 
-    if (users.length === 0) {
-      console.log('No users opted in for daily emails.');
-      return;
-    }
+    if (users.length === 0) return;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dayName = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    // Filter users whose preferred hour matches their local current hour
+    const dueUsers = users.filter(u => {
+      const tz = u.timezone || 'UTC';
+      const preferred = (u.dailyEmailTime || '07:00').split(':')[0];
+      const preferredH = parseInt(preferred, 10);
+      const nowH = currentHourInTimezone(tz);
+      return nowH !== null && nowH === preferredH;
+    });
 
-    for (const user of users) {
+    if (dueUsers.length === 0) return;
+
+    for (const user of dueUsers) {
       try {
+        const tz = user.timezone || 'UTC';
+        const userLocalDate = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+        const today = new Date(userLocalDate); today.setHours(0, 0, 0, 0);
+        const dayName = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
         const tasks = await prisma.task.findMany({
           where: { userId: user.id, isActive: true }
         });
@@ -110,18 +129,17 @@ async function sendDailyEmails() {
       }
     }
 
-    console.log(`Daily email job complete. Sent to ${users.length} users.`);
+    console.log(`Daily email job complete. Sent to ${dueUsers.length} user(s).`);
   } catch (err) {
     console.error('Daily email job error:', err.message);
   }
 }
 
 function startDailyEmailCron() {
-  // Run at 7:00 AM every day
-  cron.schedule('0 7 * * *', sendDailyEmails, {
-    timezone: 'Asia/Kolkata'
-  });
-  console.log('Daily email cron scheduled for 7:00 AM IST');
+  // Every hour on minute 0 — each user gets the email only when their
+  // local preferred hour matches. See sendDailyEmails for the filter.
+  cron.schedule('0 * * * *', sendDailyEmails, { timezone: 'UTC' });
+  console.log('Daily email cron scheduled hourly (UTC) — fires per-user at their local preferred time');
 }
 
 module.exports = { startDailyEmailCron, sendDailyEmails };

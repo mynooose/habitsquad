@@ -5,6 +5,15 @@ import './globals.css';
 export const metadata = {
   title: 'HabitSquad — Track Habits, Build Accountability',
   description: 'A habit tracking app with social accountability groups.',
+  manifest: '/manifest.json',
+  appleWebApp: { capable: true, title: 'HabitSquad', statusBarStyle: 'default' },
+  icons: { icon: '/icon.svg', apple: '/icon.svg' }
+};
+
+export const viewport = {
+  themeColor: '#6366f1',
+  width: 'device-width',
+  initialScale: 1
 };
 
 export default function RootLayout({ children }) {

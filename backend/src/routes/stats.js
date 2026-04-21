@@ -11,6 +11,7 @@ router.get('/streak', ctrl.getStreak);
 router.get('/overview', ctrl.getOverview);
 router.get('/dashboard', ctrl.getDashboard);
 router.get('/week', ctrl.getWeek);
+router.get('/personal-analytics', ctrl.getPersonalAnalytics);
 router.get('/rankings', ctrl.getRankings);
 
 module.exports = router;

@@ -202,7 +202,10 @@ async function getAnalytics(req, res, next) {
       prisma.task.findMany({ where: { userId: { in: memberIds }, groupId: req.params.id } }),
       prisma.taskCompletion.findMany({
         where: { userId: { in: memberIds }, task: { groupId: req.params.id }, date: { gte: startDate, lt: tomorrow } },
-        include: { task: { select: { id: true, title: true, color: true, weightage: true, isActive: true } } },
+        include: {
+          task: { select: { id: true, title: true, color: true, weightage: true, isActive: true } },
+          reactions: { select: { emoji: true, userId: true } }
+        },
         orderBy: { createdAt: 'desc' }
       }),
       prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, totalXp: true } })
@@ -299,17 +302,28 @@ async function getAnalytics(req, res, next) {
 
     // Activity feed — last 20 completions
     const memberUserMap = Object.fromEntries(members.map(m => [m.userId, m.user]));
-    const activityFeed = allCompletions.slice(0, 20).map(c => ({
-      userId: c.userId,
-      userName: memberUserMap[c.userId]?.name || 'Member',
-      userAvatar: memberUserMap[c.userId]?.avatar || null,
-      taskId: c.taskId,
-      taskTitle: c.task?.title || 'Task',
-      taskColor: c.task?.color || null,
-      completedAt: c.createdAt,
-      date: dateKey(c.date),
-      proofUrl: c.proofUrl || null
-    }));
+    const activityFeed = allCompletions.slice(0, 20).map(c => {
+      const counts = {};
+      const mine = new Set();
+      (c.reactions || []).forEach(r => {
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+        if (r.userId === req.user.id) mine.add(r.emoji);
+      });
+      return {
+        completionId: c.id,
+        userId: c.userId,
+        userName: memberUserMap[c.userId]?.name || 'Member',
+        userAvatar: memberUserMap[c.userId]?.avatar || null,
+        taskId: c.taskId,
+        taskTitle: c.task?.title || 'Task',
+        taskColor: c.task?.color || null,
+        completedAt: c.createdAt,
+        date: dateKey(c.date),
+        proofUrl: c.proofUrl || null,
+        reactions: counts,
+        myReactions: Array.from(mine)
+      };
+    });
 
     res.json({
       days,

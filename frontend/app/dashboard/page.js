@@ -289,11 +289,14 @@ export default function DashboardPage() {
 
       {/* Empty state */}
       {tasks.length === 0 && (
-        <div className="text-center py-16 rounded-2xl glass-card">
-          <Target className="w-12 h-12 mx-auto mb-4 text-muted" />
-          <h3 className="text-lg font-semibold mb-2">No habits yet</h3>
-          <p className="text-muted mb-6">Create your first habit to start tracking</p>
-          <Link href="/dashboard/new" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand font-medium"><Plus className="w-4 h-4" /> Create Habit</Link>
+        <div className="p-8 rounded-[24px] soft-card bento-purple text-center">
+          <div className="w-16 h-16 rounded-2xl gradient-brand flex items-center justify-center mx-auto mb-4">
+            <Target className="w-8 h-8 text-white" />
+          </div>
+          <h3 className="text-xl font-bold mb-1">Ready to build a habit?</h3>
+          <p className="text-muted mb-6 max-w-sm mx-auto">Start with one small thing you want to do every day. Tiny steps compound.</p>
+          <Link href="/dashboard/new" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-brand text-white font-semibold hover:opacity-90"><Plus className="w-4 h-4" /> Create your first habit</Link>
+          <p className="text-xs text-muted mt-4">Want to do this with friends? <Link href="/dashboard/new" className="text-brand-500 hover:underline font-medium">Create a group</Link> instead.</p>
         </div>
       )}
 

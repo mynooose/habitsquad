@@ -1,6 +1,6 @@
 const prisma = require('../database/prisma');
 
-const USER_SELECT = { id: true, email: true, name: true, avatar: true, dob: true, gender: true, bio: true, totalXp: true, dailyEmailEnabled: true, createdAt: true };
+const USER_SELECT = { id: true, email: true, name: true, avatar: true, dob: true, gender: true, bio: true, totalXp: true, dailyEmailEnabled: true, dailyEmailTime: true, timezone: true, onboardedAt: true, createdAt: true };
 
 async function findUserByEmail(email) {
   return prisma.user.findUnique({ where: { email } });

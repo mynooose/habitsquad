@@ -72,6 +72,30 @@ async function sendVerificationEmail({ to, name, token }) {
   });
 }
 
+async function sendPasswordResetEmail({ to, token }) {
+  const resetUrl = `${process.env.FRONTEND_URL}/reset?token=${token}`;
+
+  await sendEmail({
+    to,
+    subject: 'Reset your HabitSquad password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #6366f1;">Reset your password</h2>
+        <p>Someone (hopefully you) asked to reset the password on your HabitSquad account.</p>
+        <p>Click the button below within the next hour to set a new one:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background: #6366f1; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Reset Password
+          </a>
+        </div>
+        <p style="color: #666; font-size: 13px;">Or copy this link: ${resetUrl}</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #999; font-size: 12px;">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+      </div>
+    `
+  });
+}
+
 async function sendGroupAddedEmail({ to, inviterName, groupName }) {
   const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
 
@@ -95,4 +119,4 @@ async function sendGroupAddedEmail({ to, inviterName, groupName }) {
   });
 }
 
-module.exports = { sendEmail, sendGroupInviteEmail, sendGroupAddedEmail, sendVerificationEmail };
+module.exports = { sendEmail, sendGroupInviteEmail, sendGroupAddedEmail, sendVerificationEmail, sendPasswordResetEmail };
