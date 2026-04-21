@@ -932,7 +932,7 @@ function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expande
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
         </div>
-      </div>
+      </section>
 
       {/* Activity feed */}
       <div>
