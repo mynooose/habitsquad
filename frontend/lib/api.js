@@ -180,8 +180,15 @@ class ApiClient {
     return this.request('/groups/join', { method: 'POST', body: { inviteCode } });
   }
 
-  async leaveGroup(id) {
-    return this.request(`/groups/${id}/leave`, { method: 'DELETE' });
+  async leaveGroup(id, transferTo = null) {
+    return this.request(`/groups/${id}/leave`, {
+      method: 'DELETE',
+      ...(transferTo ? { body: { transferTo } } : {})
+    });
+  }
+
+  async updateMemberRole(groupId, userId, role) {
+    return this.request(`/groups/${groupId}/members/${userId}/role`, { method: 'PUT', body: { role } });
   }
 
   async getTaskBudget(groupId = null) {

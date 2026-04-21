@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
@@ -39,6 +39,9 @@ export default function GroupDetailPage() {
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showLeave, setShowLeave] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [memberMenuFor, setMemberMenuFor] = useState(null);
+  const [transferTo, setTransferTo] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [completing, setCompleting] = useState(null);
 
@@ -74,12 +77,28 @@ export default function GroupDetailPage() {
   const handleLeave = async () => {
     setLeaving(true);
     try {
-      await api.leaveGroup(groupId);
+      await api.leaveGroup(groupId, transferTo || null);
       router.push('/dashboard/groups');
     } catch (err) {
       alert(err.message);
       setLeaving(false);
     }
+  };
+
+  const handlePromote = async (userId) => {
+    setMemberMenuFor(null);
+    try {
+      await api.updateMemberRole(groupId, userId, 'ADMIN');
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const handleDemote = async (userId) => {
+    setMemberMenuFor(null);
+    try {
+      await api.updateMemberRole(groupId, userId, 'MEMBER');
+      fetchData();
+    } catch (err) { alert(err.message); }
   };
 
   const handleToggle = async (task, proofUrl = null) => {
@@ -135,19 +154,51 @@ export default function GroupDetailPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
-        <div className="flex-1">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{group.name}</h1>
-            {role === 'ADMIN' && <Crown className="w-5 h-5 text-yellow-500" />}
+            <h1 className="text-2xl font-bold truncate">{group.name}</h1>
+            {role === 'ADMIN' && <Crown className="w-5 h-5 text-yellow-500 shrink-0" />}
           </div>
-          {group.description && <p className="text-muted text-sm">{group.description}</p>}
+          {group.description && <p className="text-muted text-sm truncate">{group.description}</p>}
         </div>
+        {role === 'ADMIN' && (
+          <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary" title="Group settings">
+            <Settings className="w-5 h-5" />
+          </button>
+        )}
         <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg gradient-brand font-medium hover:opacity-90">
           <UserPlus className="w-4 h-4" /> Invite
         </button>
+      </div>
+
+      {/* Member strip — always visible with avatar + level badge */}
+      <div className="mb-6 p-4 rounded-xl glass-card">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Members ({memberTasks.length})</p>
+        <div className="flex flex-wrap gap-3">
+          {[...memberTasks].sort((a, b) => (a.user.id === user?.id ? -1 : b.user.id === user?.id ? 1 : (b.totalXp || 0) - (a.totalXp || 0))).map(m => {
+            const isMe = m.user.id === user?.id;
+            const lvl = getLevel(m.totalXp || 0);
+            return (
+              <div key={m.user.id} className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full bg-[var(--card-bg-hover)]">
+                <div className="relative">
+                  {m.user.avatar ? (
+                    <img src={m.user.avatar} alt={m.user.name} className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-[var(--card-bg)] flex items-center justify-center text-xs font-bold">{getInitials(m.user.name)}</div>
+                  )}
+                  {m.role === 'ADMIN' && <Crown className="absolute -top-1 -right-1 w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-xs font-semibold">{isMe ? 'You' : m.user.name.split(' ')[0]}</span>
+                  <span className={cn('text-[10px] font-bold', lvl.color)}>Lv.{lvl.level}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Invite Code */}
@@ -327,15 +378,42 @@ export default function GroupDetailPage() {
         <div>
           <div className="rounded-xl glass-card overflow-hidden mb-4">
             {group.memberships?.map(m => (
-              <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
-                <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
+              <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0 relative">
+                {m.user.avatar ? (
+                  <img src={m.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
+                )}
                 <div className="flex-1">
                   <p className="font-medium">{m.user.name} {m.user.id === user?.id && <span className="text-muted">(You)</span>}</p>
                   <p className="text-xs text-muted">{m.user.email}</p>
                 </div>
-                {m.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full">Admin</span>}
+                {m.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full flex items-center gap-1"><Crown className="w-3 h-3" /> Admin</span>}
                 {m.user.id !== user?.id && role === 'ADMIN' && (
-                  <button onClick={() => handleRemoveMember(m.user.id)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                  <div className="relative">
+                    <button onClick={() => setMemberMenuFor(memberMenuFor === m.user.id ? null : m.user.id)} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {memberMenuFor === m.user.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMemberMenuFor(null)} />
+                        <div className="absolute right-0 top-10 z-20 min-w-[180px] p-1 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
+                          {m.role === 'MEMBER' ? (
+                            <button onClick={() => handlePromote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
+                              <ShieldPlus className="w-4 h-4 text-yellow-500" /> Make admin
+                            </button>
+                          ) : (
+                            <button onClick={() => handleDemote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
+                              <Shield className="w-4 h-4 text-muted" /> Demote to member
+                            </button>
+                          )}
+                          <button onClick={() => { setMemberMenuFor(null); handleRemoveMember(m.user.id); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm text-red-400 text-left">
+                            <UserX className="w-4 h-4" /> Remove from group
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -364,17 +442,32 @@ export default function GroupDetailPage() {
 
       {/* Leave Group */}
       <div className="mt-8">
-        {showLeave ? (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-            <p className="text-sm mb-4">Leave this group?</p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowLeave(false)} className="flex-1 py-2 rounded-lg bg-[var(--card-bg)] text-sm font-medium">Cancel</button>
-              <button onClick={handleLeave} disabled={leaving} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium disabled:opacity-50">
-                {leaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Leave'}
-              </button>
+        {showLeave ? (() => {
+          const adminCount = (group.memberships || []).filter(m => m.role === 'ADMIN').length;
+          const otherMembers = (group.memberships || []).filter(m => m.user.id !== user?.id);
+          const isSoleAdmin = role === 'ADMIN' && adminCount === 1 && otherMembers.length > 0;
+          return (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+              <p className="text-sm mb-3 font-medium">Leave this group?</p>
+              {isSoleAdmin && (
+                <>
+                  <p className="text-xs text-muted mb-2">You're the only admin. Pick a successor, or leave it blank to auto-transfer to the highest-XP member.</p>
+                  <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}
+                    className="w-full mb-3 px-3 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--input-border)] text-sm">
+                    <option value="">Auto-transfer (highest XP)</option>
+                    {otherMembers.map(m => <option key={m.user.id} value={m.user.id}>{m.user.name}</option>)}
+                  </select>
+                </>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowLeave(false); setTransferTo(''); }} className="flex-1 py-2 rounded-lg bg-[var(--card-bg)] text-sm font-medium">Cancel</button>
+                <button onClick={handleLeave} disabled={leaving} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium disabled:opacity-50">
+                  {leaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Leave'}
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
+          );
+        })() : (
           <button onClick={() => setShowLeave(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 text-sm">
             <LogOut className="w-4 h-4" /> Leave Group
           </button>
@@ -383,6 +476,9 @@ export default function GroupDetailPage() {
 
       {/* Invite Modal */}
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
+
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal group={group} onClose={() => setShowSettings(false)} onSaved={fetchData} />}
 
       {/* Proof Upload Modal */}
       {proofTask && <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />}
@@ -572,6 +668,72 @@ function InviteModal({ group, onClose, onInvited }) {
 
         <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Done</button>
       </div>
+    </div>
+  );
+}
+
+function SettingsModal({ group, onClose, onSaved }) {
+  const [name, setName] = useState(group.name || '');
+  const [description, setDescription] = useState(group.description || '');
+  const [color, setColor] = useState(group.color || TASK_COLORS[0]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Name is required'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateGroup(group.id, { name: name.trim(), description: description.trim() || null, color });
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <form onSubmit={handleSave} className="w-full max-w-md p-6 rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2"><Settings className="w-5 h-5" /> Group Settings</h2>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted">Name</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
+              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted">Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={200}
+              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500 resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted">Color</label>
+            <div className="flex flex-wrap gap-2">
+              {TASK_COLORS.map(c => (
+                <button key={c} type="button" onClick={() => setColor(c)}
+                  className={cn('w-8 h-8 rounded-lg transition-all', color === c ? 'ring-2 ring-offset-2 ring-offset-[var(--card-bg-solid)] scale-110' : 'hover:scale-105')}
+                  style={{ backgroundColor: c }} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+        <div className="flex gap-3 mt-6">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium">Cancel</button>
+          <button type="submit" disabled={saving || !name.trim()} className="flex-1 py-3 rounded-xl btn-primary font-semibold disabled:opacity-50">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Save'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

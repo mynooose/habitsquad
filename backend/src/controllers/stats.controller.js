@@ -187,24 +187,49 @@ async function getDashboard(req, res, next) {
       personalBest = Math.max(personalBest, dayWeight > 0 ? Math.round((dayCompleted / dayWeight) * 100) : 0);
     }
 
-    // Streak
+    // Streaks: "full" (all tasks completed) and "show-up" (>=1 task completed)
     let currentStreak = 0, longestStreak = 0, tempStreak = 0;
+    let showUpCurrent = 0, showUpLongest = 0, showUpTemp = 0;
     for (let i = 0; i <= 90; i++) {
       const checkDate = new Date(today); checkDate.setDate(checkDate.getDate() - i);
       const dk = checkDate.toISOString().split('T')[0];
       const applicable = getApplicableTasks(tasks, checkDate);
       const completed = allByDate[dk] || new Set();
       const allDone = applicable.length > 0 && applicable.every(t => completed.has(t.id));
+      const showedUp = completed.size > 0;
       if (allDone) { tempStreak++; if (i === 0 || currentStreak > 0) currentStreak = tempStreak; }
       else if (i > 0) { tempStreak = 0; }
       longestStreak = Math.max(longestStreak, tempStreak);
+
+      if (showedUp) { showUpTemp++; if (i === 0 || showUpCurrent > 0) showUpCurrent = showUpTemp; }
+      else if (i > 0) { showUpTemp = 0; }
+      showUpLongest = Math.max(showUpLongest, showUpTemp);
+    }
+
+    // Last 7 days daily scores (for chart, oldest first)
+    const dailyData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const dk = d.toISOString().split('T')[0];
+      const applicable = getApplicableTasks(tasks, d);
+      const completed = allByDate[dk] || new Set();
+      const weight = applicable.reduce((s, t) => s + t.weightage, 0);
+      const done = computeDayScore(applicable, completed);
+      dailyData.push({
+        date: dk,
+        score: weight > 0 ? Math.round((done / weight) * 100) : 0,
+        hasActivity: completed.size > 0
+      });
     }
 
     res.json({
       today: { score: todayScore, totalWeight: todayApplicable.reduce((s, t) => s + t.weightage, 0), completedTasks: todayCompletions.size, totalTasks: todayApplicable.length },
       yesterday: { score: yesterdayScore }, delta: todayScore - yesterdayScore,
       thisWeek: { avgScore: thisWeekAvg }, lastWeek: { avgScore: lastWeekAvg }, weekDelta: thisWeekAvg - lastWeekAvg,
-      streak: { current: currentStreak, longest: longestStreak }, personalBest,
+      streak: { current: currentStreak, longest: longestStreak },
+      showUpStreak: { current: showUpCurrent, longest: showUpLongest },
+      dailyData,
+      personalBest,
       budget: { personal: { used: personalUsed, remaining: 100 - personalUsed }, groups: groupBudgets }
     });
   } catch (error) { next(error); }

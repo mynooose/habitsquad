@@ -33,7 +33,7 @@ async function findGroupById(id) {
     include: {
       createdBy: { select: { id: true, name: true } },
       memberships: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
         orderBy: { joinedAt: 'asc' }
       },
       invites: {
@@ -66,7 +66,7 @@ async function deleteMembershipById(id) {
 async function findGroupMembers(groupId) {
   return prisma.groupMembership.findMany({
     where: { groupId },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
     orderBy: { joinedAt: 'asc' }
   });
 }

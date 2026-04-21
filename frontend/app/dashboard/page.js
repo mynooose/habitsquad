@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, TrendingUp, TrendingDown, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera, X } from 'lucide-react';
-import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS, getLevel } from '@/lib/utils';
+import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, Minus, Zap, Camera, X, BarChart3, Info } from 'lucide-react';
+import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -113,85 +113,81 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Trends + Streaks */}
+      {/* Show-up Streak + 7-day activity */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-        {/* Trends */}
-        <div className="p-5 rounded-[24px] soft-card bento-blue">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-white" />
+        {/* Show-up Streak */}
+        <div className="p-5 rounded-[24px] soft-card bento-orange group relative">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl gradient-orange flex items-center justify-center">
+                <Flame className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider">Show-up Streak</span>
             </div>
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Trends</span>
-          </div>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">This week</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold">{dashStats?.thisWeek?.avgScore || 0}% avg</span>
-                {dashStats?.weekDelta !== 0 && dashStats?.weekDelta !== undefined && (
-                  <span className={cn('text-xs font-bold', dashStats.weekDelta > 0 ? 'text-green-400' : 'text-red-400')}>
-                    {dashStats.weekDelta > 0 ? '+' : ''}{dashStats.weekDelta}
-                  </span>
-                )}
+            <div className="relative">
+              <Info className="w-4 h-4 text-muted opacity-60" />
+              <div className="absolute right-0 top-5 w-60 p-2.5 rounded-lg bg-[var(--card-bg-solid)] border border-[var(--card-border)] text-[11px] text-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                Days in a row you completed at least one task. Keep showing up — momentum matters more than perfection.
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Last week</span>
-              <span className="text-sm font-bold">{dashStats?.lastWeek?.avgScore || 0}% avg</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-[var(--card-border)] pt-2">
-              <span className="text-sm text-muted">Personal best</span>
-              <span className="text-sm font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Streaks */}
-        <div className="p-5 rounded-[24px] soft-card bento-orange">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-xl gradient-orange flex items-center justify-center">
-              <Flame className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Streaks</span>
           </div>
           <div className="flex items-end gap-1 mb-3">
-            <span className="text-4xl font-black text-orange-400">{dashStats?.streak?.current || 0}</span>
-            <span className="text-sm text-muted mb-1.5">days</span>
+            <span className="text-4xl font-black text-orange-400">{dashStats?.showUpStreak?.current || 0}</span>
+            <span className="text-sm text-muted mb-1.5">day{(dashStats?.showUpStreak?.current || 0) === 1 ? '' : 's'} in a row</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted">Longest</span>
-            <span className="font-bold">{dashStats?.streak?.longest || 0} days</span>
+            <span className="font-bold">{dashStats?.showUpStreak?.longest || 0} days</span>
+          </div>
+        </div>
+
+        {/* 7-day activity chart */}
+        <div className="p-5 rounded-[24px] soft-card bento-blue">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider">Last 7 Days</span>
+            </div>
+            <span className="text-xs text-muted font-medium">{dashStats?.thisWeek?.avgScore || 0}% avg</span>
+          </div>
+          <div className="flex items-end justify-between gap-1.5 h-20 mb-2">
+            {(dashStats?.dailyData || []).map((d, i) => {
+              const isToday = i === (dashStats?.dailyData?.length || 0) - 1;
+              const dateObj = new Date(d.date + 'T12:00:00');
+              const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'narrow' });
+              return (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group/bar">
+                  <div className="relative w-full flex items-end" style={{ height: '56px' }}>
+                    <div
+                      className={cn(
+                        'w-full rounded-md transition-all',
+                        d.score >= 80 ? 'bg-gradient-to-t from-green-500 to-green-400' :
+                        d.score >= 50 ? 'bg-gradient-to-t from-blue-500 to-blue-400' :
+                        d.score > 0 ? 'bg-gradient-to-t from-amber-500 to-amber-400' :
+                        'bg-[var(--card-bg-hover)]',
+                        isToday && 'ring-2 ring-blue-400 ring-offset-1 ring-offset-[var(--card-bg)]'
+                      )}
+                      style={{ height: `${Math.max(d.score, 4)}%` }}
+                      title={`${d.date}: ${d.score}%`}
+                    />
+                  </div>
+                  <span className={cn('text-[10px] font-semibold', isToday ? 'text-blue-400' : 'text-muted')}>{dayLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-[var(--card-border)]">
+            <span>Best: <span className="font-bold text-yellow-400">{dashStats?.personalBest || 0}%</span></span>
+            {dashStats?.weekDelta !== undefined && dashStats?.weekDelta !== 0 && (
+              <span className={cn('font-bold', dashStats.weekDelta > 0 ? 'text-green-400' : 'text-red-400')}>
+                {dashStats.weekDelta > 0 ? '+' : ''}{dashStats.weekDelta}% vs last week
+              </span>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Level & XP */}
-      {user?.totalXp !== undefined && (() => {
-        const lvl = getLevel(user.totalXp || 0);
-        return (
-          <div className="p-5 rounded-[24px] soft-card bento-yellow mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                </div>
-                <span className="text-xs font-semibold text-muted uppercase tracking-wider">Level</span>
-              </div>
-              <span className="text-xs text-muted font-medium">{user.totalXp || 0} XP</span>
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-xl font-black text-yellow-400">{lvl.level}</div>
-              <div className="flex-1">
-                <p className={cn('font-bold', lvl.color)}>{lvl.name}</p>
-                <p className="text-xs text-muted">{lvl.nextLevelXp ? `${lvl.nextLevelXp - lvl.currentXp} XP to Level ${lvl.level + 1}` : 'Max level reached!'}</p>
-              </div>
-            </div>
-            <div className="h-2 rounded-full bg-[var(--card-bg-hover)] overflow-hidden">
-              <div className="h-full rounded-full bg-yellow-500 transition-all duration-500" style={{ width: `${lvl.progress}%` }} />
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Rankings */}
       {rankings?.groups?.length > 0 && (

@@ -241,12 +241,51 @@ async function leaveGroup(req, res, next) {
       const adminCount = await groupQ.countAdmins(req.params.id);
       if (adminCount === 1) {
         const memberCount = await groupQ.countMembers(req.params.id);
-        if (memberCount > 1) return res.status(400).json({ error: 'Cannot leave as the only admin. Transfer ownership first.' });
-        await groupQ.deleteGroup(req.params.id);
-        return res.json({ success: true, groupDeleted: true });
+        if (memberCount === 1) {
+          await groupQ.deleteGroup(req.params.id);
+          return res.json({ success: true, groupDeleted: true });
+        }
+        // Auto-transfer admin to highest-XP remaining member.
+        // Optional: caller passes { transferTo: userId } to pick explicitly.
+        const { transferTo } = req.body || {};
+        let successorId = null;
+        if (transferTo && transferTo !== req.user.id) {
+          const target = await groupQ.findMembership(transferTo, req.params.id);
+          if (!target) return res.status(400).json({ error: 'Transfer target is not a member of this group' });
+          successorId = transferTo;
+        } else {
+          const others = await prisma.groupMembership.findMany({
+            where: { groupId: req.params.id, userId: { not: req.user.id } },
+            include: { user: { select: { id: true, totalXp: true } } }
+          });
+          others.sort((a, b) => (b.user.totalXp || 0) - (a.user.totalXp || 0));
+          successorId = others[0]?.user.id;
+        }
+        if (!successorId) return res.status(400).json({ error: 'No eligible member to promote' });
+        await prisma.groupMembership.update({
+          where: { userId_groupId: { userId: successorId, groupId: req.params.id } },
+          data: { role: 'ADMIN' }
+        });
       }
     }
     await groupQ.deleteMembershipById(membership.id);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+async function updateMemberRole(req, res, next) {
+  try {
+    const membership = await groupQ.findMembership(req.user.id, req.params.id);
+    if (!membership || membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only admins can change roles' });
+    const { role } = req.body || {};
+    if (role !== 'ADMIN' && role !== 'MEMBER') return res.status(400).json({ error: 'Role must be ADMIN or MEMBER' });
+    if (req.params.userId === req.user.id) return res.status(400).json({ error: 'Cannot change your own role' });
+    const target = await groupQ.findMembership(req.params.userId, req.params.id);
+    if (!target) return res.status(404).json({ error: 'User is not a member of this group' });
+    await prisma.groupMembership.update({
+      where: { userId_groupId: { userId: req.params.userId, groupId: req.params.id } },
+      data: { role }
+    });
     res.json({ success: true });
   } catch (error) { next(error); }
 }
@@ -264,4 +303,4 @@ async function updateGroup(req, res, next) {
   }
 }
 
-module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup };
+module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole };
