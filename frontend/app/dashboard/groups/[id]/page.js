@@ -230,7 +230,8 @@ export default function GroupDetailPage() {
                 const isMe = member.user.id === user?.id;
                 const isExpanded = expandedMembers[member.user.id] !== false;
                 const mColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-                const isShamed = member.totalCount > 0 && member.score < 50;
+                // Shamed only if they started but fell short — pure 0% is "not started yet"
+                const isShamed = member.totalCount > 0 && member.score > 0 && member.score < 50;
                 const isPerfect = member.totalCount > 0 && member.score === 100;
                 const noActivity = member.totalCount > 0 && member.completedCount === 0;
                 const lvl = getLevel(member.totalXp || 0);
@@ -255,7 +256,7 @@ export default function GroupDetailPage() {
                           <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold', lvl.color, 'bg-[var(--card-bg)]')}>Lv.{lvl.level}</span>
                         </p>
                         <p className="text-xs text-muted">
-                          {noActivity ? <span className="text-red-400 font-medium">No activity today</span> :
+                          {noActivity ? <span className="italic">No activity today</span> :
                             <>{member.completedCount}/{member.totalCount} completed</>}
                           {' '}&middot; {member.totalXp || 0} XP
                         </p>
