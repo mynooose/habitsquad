@@ -149,7 +149,7 @@ async function getMemberTasks(req, res, next) {
     if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
 
     const members = await groupQ.findGroupMembers(req.params.id);
-    const { today, tomorrow } = getTodayRange();
+    const { today, tomorrow } = getTodayRange(req.query.date);
     const memberIds = members.map(m => m.userId);
 
     // Batched queries — 3 total instead of N*3
@@ -193,8 +193,8 @@ async function getAnalytics(req, res, next) {
     const members = await groupQ.findGroupMembers(req.params.id);
     const memberIds = members.map(m => m.userId);
 
-    const now = new Date(); now.setUTCHours(0, 0, 0, 0);
-    const tomorrow = new Date(now); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    // Use user-local date if provided, else UTC today
+    const { today: now, tomorrow } = getTodayRange(req.query.date);
     const startDate = new Date(now); startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
     const weekStart = new Date(now); weekStart.setUTCDate(weekStart.getUTCDate() - 6);
 
@@ -341,8 +341,8 @@ async function getLeaderboard(req, res, next) {
     if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
 
     const members = await groupQ.findGroupMembers(req.params.id);
-    const endDate = new Date();
-    const startDate = new Date();
+    const { today: endDate } = getTodayRange(req.query.date);
+    const startDate = new Date(endDate);
     if (period === 'week') startDate.setDate(startDate.getDate() - 7);
     else startDate.setMonth(startDate.getMonth() - 1);
 

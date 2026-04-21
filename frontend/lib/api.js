@@ -213,7 +213,7 @@ class ApiClient {
   }
 
   async getMemberTasks(groupId) {
-    return this.request(`/groups/${groupId}/member-tasks`);
+    return this.request(`/groups/${groupId}/member-tasks?date=${this.getLocalDateKey()}`);
   }
 
   async getDashboardStats() {
@@ -230,15 +230,15 @@ class ApiClient {
   }
 
   async getDashboardRankings() {
-    return this.request('/stats/rankings');
+    return this.request(`/stats/rankings?date=${this.getLocalDateKey()}`);
   }
 
   async getLeaderboard(groupId, period = 'week') {
-    return this.request(`/groups/${groupId}/leaderboard?period=${period}`);
+    return this.request(`/groups/${groupId}/leaderboard?period=${period}&date=${this.getLocalDateKey()}`);
   }
 
   async getGroupAnalytics(groupId, days = 30) {
-    return this.request(`/groups/${groupId}/analytics?days=${days}`);
+    return this.request(`/groups/${groupId}/analytics?days=${days}&date=${this.getLocalDateKey()}`);
   }
 
   async toggleReaction(completionId, emoji) {
