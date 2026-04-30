@@ -76,7 +76,7 @@ export default function EditTaskPage() {
     setError('');
     try {
       await api.updateTask(taskId, { title, frequency, weightage, color, groupId, isActive, requiresProof, deadlineTime: hasDeadline ? deadlineTime : null });
-      router.push('/dashboard');
+      router.push(groupId ? `/dashboard/groups/${groupId}` : '/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -88,7 +88,7 @@ export default function EditTaskPage() {
     setDeleting(true);
     try {
       await api.deleteTask(taskId);
-      router.push('/dashboard');
+      router.push(groupId ? `/dashboard/groups/${groupId}` : '/dashboard');
     } catch (err) {
       setError(err.message);
       setDeleting(false);
