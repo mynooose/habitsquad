@@ -371,9 +371,10 @@ export default function NewPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Habit Name *</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Morning meditation" maxLength={100}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
+            <label className="block text-sm font-medium mb-2">Habit Name <span className="text-red-400">*</span></label>
+            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Morning meditation" maxLength={100}
+              className={cn('w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500',
+                title.trim() ? 'border-[var(--input-border)]' : 'border-red-500/40')} />
           </div>
 
           <div>
@@ -523,9 +524,10 @@ export default function NewPage() {
                   <div key={habit.id} className="p-4 rounded-xl glass-card space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: habit.color }} />
-                      <input type="text" value={habit.title} onChange={(e) => updateHabit(habit.id, 'title', e.target.value)}
-                        placeholder={`Habit ${idx + 1} name`} maxLength={100}
-                        className="flex-1 px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 text-sm" />
+                      <input type="text" required value={habit.title} onChange={(e) => updateHabit(habit.id, 'title', e.target.value)}
+                        placeholder={`Habit ${idx + 1} name (required)`} maxLength={100}
+                        className={cn('flex-1 px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] border placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 text-sm',
+                          habit.title.trim() ? 'border-[var(--input-border)]' : 'border-red-500/40')} />
                       <span className="text-sm font-bold tabular-nums min-w-[48px] text-right text-zinc-300">
                         {habit.weightage}pts
                       </span>
@@ -536,15 +538,18 @@ export default function NewPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1 flex-1 flex-wrap">
-                        {FREQUENCIES.map(f => (
-                          <button key={f.value} type="button" onClick={() => updateHabit(habit.id, 'frequency', f.value)}
-                            className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
+                    {/* Row 1: frequency pills (wrap freely) */}
+                    <div className="flex flex-wrap gap-1">
+                      {FREQUENCIES.map(f => (
+                        <button key={f.value} type="button" onClick={() => updateHabit(habit.id, 'frequency', f.value)}
+                          className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Row 2: Proof + Deadline + Colors (wrap freely) */}
+                    <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={() => updateHabit(habit.id, 'requiresProof', !habit.requiresProof)}
                         title={habit.requiresProof ? 'Photo proof required — tap to disable' : 'No photo proof — tap to require it'}
                         className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border',
@@ -564,7 +569,7 @@ export default function NewPage() {
                             : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary')}>
                         <Clock className="w-3 h-3" /> {habit.deadlineTime ? formatDeadline(habit.deadlineTime) : 'Deadline'}
                       </button>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1 ml-auto">
                         {TASK_COLORS.map(c => (
                           <button key={c} type="button" onClick={() => updateHabit(habit.id, 'color', c)}
                             className={cn('w-5 h-5 rounded transition-transform hover:scale-125', habit.color === c && 'ring-2 ring-white ring-offset-1 ring-offset-surface-100')} style={{ backgroundColor: c }} />
@@ -648,9 +653,10 @@ export default function NewPage() {
                           <p className="text-xs text-muted">Existing habit</p>
                         </div>
                       ) : (
-                        <input type="text" value={habit.title} onChange={(e) => updateSetupHabit(habit.id, 'title', e.target.value)}
-                          placeholder={`Habit ${idx + 1} name`} maxLength={100}
-                          className="flex-1 px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 text-sm" />
+                        <input type="text" required value={habit.title} onChange={(e) => updateSetupHabit(habit.id, 'title', e.target.value)}
+                          placeholder={`Habit ${idx + 1} name (required)`} maxLength={100}
+                          className={cn('flex-1 px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] border placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 text-sm',
+                            habit.title.trim() ? 'border-[var(--input-border)]' : 'border-red-500/40')} />
                       )}
                       <span className="text-sm font-bold tabular-nums min-w-[48px] text-right text-zinc-300">{habit.weightage}pts</span>
                       {!habit.isExisting && setupHabits.length > 1 && (
@@ -660,8 +666,8 @@ export default function NewPage() {
                       )}
                     </div>
                     {!habit.isExisting && (
-                      <div className="flex items-center gap-3">
-                        <div className="flex gap-1 flex-1 flex-wrap">
+                      <>
+                        <div className="flex flex-wrap gap-1">
                           {FREQUENCIES.map(f => (
                             <button key={f.value} type="button" onClick={() => updateSetupHabit(habit.id, 'frequency', f.value)}
                               className={cn('px-2 py-1 rounded text-xs font-medium transition-colors', habit.frequency === f.value ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
@@ -669,32 +675,34 @@ export default function NewPage() {
                             </button>
                           ))}
                         </div>
-                        <button type="button" onClick={() => updateSetupHabit(habit.id, 'requiresProof', !habit.requiresProof)}
-                          title={habit.requiresProof ? 'Photo proof required — tap to disable' : 'No photo proof — tap to require it'}
-                          className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border',
-                            habit.requiresProof
-                              ? 'bg-amber-500/20 text-amber-500 border-amber-500/40'
-                              : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary line-through opacity-70')}>
-                          {habit.requiresProof ? <Camera className="w-3 h-3" /> : <CameraOff className="w-3 h-3" />}
-                          Proof
-                        </button>
-                        <button type="button" onClick={() => {
-                            if (!habit.deadlineTime) updateSetupHabit(habit.id, 'deadlineTime', '21:00');
-                            setEditingDeadline({ mode: 'setup', id: habit.id });
-                          }}
-                          className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border whitespace-nowrap',
-                            habit.deadlineTime
-                              ? 'bg-blue-500/20 text-blue-500 border-blue-500/40'
-                              : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary')}>
-                          <Clock className="w-3 h-3" /> {habit.deadlineTime ? formatDeadline(habit.deadlineTime) : 'Deadline'}
-                        </button>
-                        <div className="flex gap-1">
-                          {TASK_COLORS.map(c => (
-                            <button key={c} type="button" onClick={() => updateSetupHabit(habit.id, 'color', c)}
-                              className={cn('w-5 h-5 rounded transition-transform hover:scale-125', habit.color === c && 'ring-2 ring-white ring-offset-1 ring-offset-surface-100')} style={{ backgroundColor: c }} />
-                          ))}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => updateSetupHabit(habit.id, 'requiresProof', !habit.requiresProof)}
+                            title={habit.requiresProof ? 'Photo proof required — tap to disable' : 'No photo proof — tap to require it'}
+                            className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border',
+                              habit.requiresProof
+                                ? 'bg-amber-500/20 text-amber-500 border-amber-500/40'
+                                : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary line-through opacity-70')}>
+                            {habit.requiresProof ? <Camera className="w-3 h-3" /> : <CameraOff className="w-3 h-3" />}
+                            Proof
+                          </button>
+                          <button type="button" onClick={() => {
+                              if (!habit.deadlineTime) updateSetupHabit(habit.id, 'deadlineTime', '21:00');
+                              setEditingDeadline({ mode: 'setup', id: habit.id });
+                            }}
+                            className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border whitespace-nowrap',
+                              habit.deadlineTime
+                                ? 'bg-blue-500/20 text-blue-500 border-blue-500/40'
+                                : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary')}>
+                            <Clock className="w-3 h-3" /> {habit.deadlineTime ? formatDeadline(habit.deadlineTime) : 'Deadline'}
+                          </button>
+                          <div className="flex flex-wrap gap-1 ml-auto">
+                            {TASK_COLORS.map(c => (
+                              <button key={c} type="button" onClick={() => updateSetupHabit(habit.id, 'color', c)}
+                                className={cn('w-5 h-5 rounded transition-transform hover:scale-125', habit.color === c && 'ring-2 ring-white ring-offset-1 ring-offset-surface-100')} style={{ backgroundColor: c }} />
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                     <div>
                       <input type="range" min="1" max={maxWeight} value={habit.weightage}

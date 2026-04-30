@@ -77,12 +77,12 @@ export default function PersonalAnalyticsPage() {
           </div>
           <div className="flex items-center justify-between mt-4 text-xs text-muted flex-wrap gap-2">
             <span className="tabular-nums">{data.history[0]?.date}</span>
-            <div className="flex items-center gap-3 flex-wrap justify-center">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-500" />≥80%</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 justify-center">
+              <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-green-500" />≥80%</span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
             </div>
             <span className="tabular-nums">{data.history[data.history.length - 1]?.date}</span>
           </div>

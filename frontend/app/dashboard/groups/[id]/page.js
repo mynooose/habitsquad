@@ -1238,13 +1238,13 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
             );
           })}
         </div>
-        <div className="flex items-center gap-3 mt-3 text-xs text-muted">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-500" />≥80%</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-xs text-muted">
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-green-500" />≥80%</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-blue-500" />≥50%</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-amber-500" />&lt;50%</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-red-500/30" />Missed</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm border border-dashed border-blue-400" />Today</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
         </div>
       </section>
     </div>

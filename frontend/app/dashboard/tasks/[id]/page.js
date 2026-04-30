@@ -200,9 +200,11 @@ export default function EditTaskPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Habit Name *</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100}
-            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500" />
+          <label className="block text-sm font-medium mb-2">Habit Name <span className="text-red-400">*</span></label>
+          <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100}
+            placeholder="e.g., Morning meditation"
+            className={cn('w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500',
+              title.trim() ? 'border-[var(--input-border)]' : 'border-red-500/40')} />
         </div>
 
         <div>
