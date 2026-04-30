@@ -120,6 +120,7 @@ model Group {
   name        String
   description String?
   color       String?
+  image       String?  @db.LongText
   inviteCode  String   @unique @default(cuid())
   isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())

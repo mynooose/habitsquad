@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus, ImagePlus } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
+import ImageCropper from '@/components/ImageCropper';
 
 const MEMBER_COLORS = [
   { bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', accent: 'text-indigo-400', avatarBg: 'bg-indigo-500/25' },
@@ -199,7 +200,9 @@ export default function GroupDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>{group.name.charAt(0)}</div>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 overflow-hidden" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
+          {group.image ? <img src={group.image} alt="" className="w-full h-full object-cover" /> : group.name.charAt(0)}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold truncate">{group.name}</h1>
@@ -230,10 +233,10 @@ export default function GroupDetailPage() {
       </button>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
+      <div className="flex gap-2 mb-6 overflow-x-auto -mx-2 px-2 pb-1 scrollbar-none">
+        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -285,21 +288,20 @@ export default function GroupDetailPage() {
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium flex items-center gap-1.5 flex-wrap">
-                          <span className="truncate">{member.user.name}</span>
-                          {isMe && <span className="text-muted">(You)</span>}
-                          {member.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full flex items-center gap-1"><Crown className="w-3 h-3" /> Admin</span>}
-                          <span className={cn('text-xs px-1.5 py-0.5 rounded font-bold bg-[var(--card-bg)]', lvl.color)}>Lv.{lvl.level}</span>
-                          {isPerfect && <span className="text-[10px] bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Star className="w-3 h-3 fill-green-600" /> Perfect day</span>}
-                          {isBehind && <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Falling behind</span>}
-                          {noActivity && <span className="text-[10px] bg-[var(--card-bg)] text-muted px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Hourglass className="w-3 h-3" /> Yet to start</span>}
-                          {hasNoTasks && <span className="text-[10px] bg-[var(--card-bg)] text-muted px-2 py-0.5 rounded-full italic">No habits yet</span>}
+                        <p className="font-semibold truncate flex items-center gap-1.5">
+                          {isMe ? 'You' : member.user.name}
+                          {member.role === 'ADMIN' && <Crown className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
                         </p>
-                        <p className="text-xs text-muted mt-0.5">
-                          {hasNoTasks ? 'Waiting to set up habits' :
-                            noActivity ? "Hasn't started today" :
-                            <>{member.completedCount}/{member.totalCount} completed</>}
-                          {' '}&middot; {member.totalXp || 0} XP
+                        <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span className={cn('font-bold', lvl.color)}>Lv.{lvl.level}</span>
+                          <span>·</span>
+                          <span>
+                            {hasNoTasks ? 'No habits yet' :
+                              noActivity ? "Hasn't started today" :
+                              `${member.completedCount}/${member.totalCount} done`}
+                          </span>
+                          {isPerfect && <span className="ml-1 text-[10px] bg-green-500/20 text-green-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><Star className="w-2.5 h-2.5 fill-green-600" /> Perfect</span>}
+                          {isBehind && <span className="ml-1 text-[10px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><TrendingDown className="w-2.5 h-2.5" /> Behind</span>}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -496,8 +498,8 @@ export default function GroupDetailPage() {
         </div>
       )}
 
-      {/* Leave Group */}
-      <div className="mt-8">
+      {/* Leave Group — only on Members tab */}
+      {tab === 'members' && <div className="mt-8">
         {showLeave ? (() => {
           const adminCount = (group.memberships || []).filter(m => m.role === 'ADMIN').length;
           const otherMembers = (group.memberships || []).filter(m => m.user.id !== user?.id);
@@ -528,7 +530,7 @@ export default function GroupDetailPage() {
             <LogOut className="w-4 h-4" /> Leave Group
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Invite Modal */}
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
@@ -738,8 +740,21 @@ function SettingsModal({ group, onClose, onSaved }) {
   const [name, setName] = useState(group.name || '');
   const [description, setDescription] = useState(group.description || '');
   const [color, setColor] = useState(group.color || TASK_COLORS[0]);
+  const [image, setImage] = useState(group.image || '');
+  const [cropSrc, setCropSrc] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { setError('Image must be under 20MB'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setCropSrc(reader.result);
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -747,7 +762,7 @@ function SettingsModal({ group, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      await api.updateGroup(group.id, { name: name.trim(), description: description.trim() || null, color });
+      await api.updateGroup(group.id, { name: name.trim(), description: description.trim() || null, color, image: image || null });
       onSaved();
       onClose();
     } catch (err) {
@@ -765,6 +780,25 @@ function SettingsModal({ group, onClose, onSaved }) {
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted">Group photo</label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center text-2xl font-bold shrink-0" style={{ backgroundColor: (color || '#8b5cf6') + '20' }}>
+                {image ? <img src={image} alt="" className="w-full h-full object-cover" /> : (name || group.name || '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 flex flex-wrap gap-2">
+                <label className="px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg)] cursor-pointer text-sm font-medium flex items-center gap-2">
+                  <ImagePlus className="w-4 h-4" /> {image ? 'Change' : 'Upload'}
+                  <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+                </label>
+                {image && (
+                  <button type="button" onClick={() => setImage('')} className="px-3 py-2 rounded-lg bg-[var(--card-bg-hover)] hover:bg-red-500/10 hover:text-red-400 text-sm font-medium">
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium mb-2 text-muted">Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
@@ -791,11 +825,32 @@ function SettingsModal({ group, onClose, onSaved }) {
 
         <div className="flex gap-3 mt-6">
           <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium">Cancel</button>
-          <button type="submit" disabled={saving || !name.trim()} className="flex-1 py-3 rounded-xl btn-primary font-semibold disabled:opacity-50">
+          <button type="submit" disabled={saving || !name.trim() || uploadingImage} className="flex-1 py-3 rounded-xl btn-primary font-semibold disabled:opacity-50">
             {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Save'}
           </button>
         </div>
       </form>
+
+      {cropSrc && (
+        <ImageCropper
+          src={cropSrc}
+          title="Crop group photo"
+          onCancel={() => setCropSrc(null)}
+          onConfirm={async (dataUrl) => {
+            setUploadingImage(true);
+            try {
+              const { url } = await api.uploadImage(dataUrl, 'groups');
+              setImage(url);
+              setCropSrc(null);
+            } catch (err) {
+              setError(err.message || 'Upload failed');
+              setCropSrc(null);
+            } finally {
+              setUploadingImage(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

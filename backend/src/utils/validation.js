@@ -30,6 +30,7 @@ const createGroupSchema = z.object({
   name: z.string().min(2).max(50),
   description: z.string().max(200).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  image: z.string().nullable().optional(),
   isPublic: z.boolean().default(false)
 });
 

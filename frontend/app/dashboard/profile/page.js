@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X, Sparkles, Flame, Shield, Swords, Medal, Star, Gem, Trophy, Crown, Lock, Trash2 } from 'lucide-react';
+import ImageCropper from '@/components/ImageCropper';
 import { getLevel, LEVELS } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,7 @@ export default function ProfilePage() {
   const [showAvatars, setShowAvatars] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showLevels, setShowLevels] = useState(false);
+  const [cropSrc, setCropSrc] = useState(null);
   const [originalData, setOriginalData] = useState(null);
 
   useEffect(() => {
@@ -290,20 +292,13 @@ export default function ProfilePage() {
             <Camera className="w-6 h-6 mx-auto mb-1 text-muted" />
             <p className="text-sm text-muted">Upload your own photo</p>
             <p className="text-xs text-muted">JPG, PNG — max 20MB</p>
-            <input type="file" accept="image/*" onChange={async (e) => {
+            <input type="file" accept="image/*" onChange={(e) => {
               const file = e.target.files?.[0];
+              e.target.value = '';
               if (!file) return;
               if (file.size > 20 * 1024 * 1024) { setError('Image must be under 20MB'); return; }
               const reader = new FileReader();
-              reader.onloadend = async () => {
-                try {
-                  const { url } = await api.uploadImage(reader.result, 'avatars');
-                  setAvatar(url);
-                  setShowAvatars(false);
-                } catch (err) {
-                  setError(err.message || 'Upload failed');
-                }
-              };
+              reader.onloadend = () => setCropSrc(reader.result);
               reader.readAsDataURL(file);
             }} className="hidden" />
           </label>
@@ -451,6 +446,25 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {cropSrc && (
+        <ImageCropper
+          src={cropSrc}
+          title="Crop your photo"
+          onCancel={() => setCropSrc(null)}
+          onConfirm={async (dataUrl) => {
+            try {
+              const { url } = await api.uploadImage(dataUrl, 'avatars');
+              setAvatar(url);
+              setShowAvatars(false);
+              setCropSrc(null);
+            } catch (err) {
+              setError(err.message || 'Upload failed');
+              setCropSrc(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

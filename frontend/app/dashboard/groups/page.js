@@ -105,8 +105,8 @@ export default function GroupsPage() {
             <Link key={group.id} href={`/dashboard/groups/${group.id}`}
               className="p-5 rounded-2xl glass-card flex items-center gap-4 hover:border-[var(--input-border)] transition-all animate-slide-up"
               style={{ animationDelay: `${i * 50}ms` }}>
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
-                {group.name.charAt(0)}
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
+                {group.image ? <img src={group.image} alt="" className="w-full h-full object-cover" /> : group.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
