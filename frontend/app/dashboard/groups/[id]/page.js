@@ -823,9 +823,15 @@ function GroupInfoModal({ group, role, currentUserId, memberMenuFor, setMemberMe
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] animate-slide-up" onClick={e => e.stopPropagation()}>
-        {/* Hero header */}
-        <div className="relative">
+      <div className="relative w-full sm:max-w-md h-[92dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+        {/* Always-visible close button — fixed to the modal frame, doesn't scroll */}
+        <button onClick={onClose} className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-sm shadow-lg">
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Hero header */}
           <div className="aspect-square w-full max-h-[280px] flex items-center justify-center text-6xl font-bold overflow-hidden"
             style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
             {group.image ? (
@@ -834,12 +840,8 @@ function GroupInfoModal({ group, role, currentUserId, memberMenuFor, setMemberMe
               <span style={{ color: group.color || '#8b5cf6' }}>{group.name.charAt(0).toUpperCase()}</span>
             )}
           </div>
-          <button onClick={onClose} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        <div className="p-5 space-y-5">
+          <div className="p-5 space-y-5">
           {/* Name + description */}
           <div>
             <div className="flex items-start gap-2">
@@ -947,6 +949,7 @@ function GroupInfoModal({ group, role, currentUserId, memberMenuFor, setMemberMe
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-sm font-semibold">
             <LogOut className="w-4 h-4" /> Leave Group
           </button>
+          </div>
         </div>
       </div>
     </div>
