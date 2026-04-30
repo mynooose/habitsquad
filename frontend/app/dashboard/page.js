@@ -300,9 +300,17 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Personal Tasks */}
+      {/* Personal (solo) Tasks — softer framing now that groups are primary */}
       {personalTasks.length > 0 && (
-        <TaskSection title="Personal" tasks={personalTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
+        <>
+          <TaskSection title="Just for me" tasks={personalTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
+          {(!groups || groups.length === 0) && (
+            <Link href="/dashboard/new"
+              className="block mb-4 px-4 py-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/15 text-sm text-brand-500 font-semibold flex items-center justify-between gap-3">
+              <span>👥 Doing this with friends? Create a group →</span>
+            </Link>
+          )}
+        </>
       )}
 
       {/* Group Tasks */}

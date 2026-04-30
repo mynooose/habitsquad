@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw, Camera, Clock } from 'lucide-react';
+import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw, Camera, CameraOff, Clock, X as XIcon } from 'lucide-react';
 import HourPicker from '@/components/HourPicker';
+import { formatDeadline } from '@/lib/utils';
 import { cn, TASK_COLORS, FREQUENCIES } from '@/lib/utils';
 
 const DEFAULT_HABIT = () => ({
@@ -14,6 +15,7 @@ const DEFAULT_HABIT = () => ({
   frequency: 'DAILY',
   weightage: 100,
   requiresProof: true,
+  deadlineTime: null,
   color: TASK_COLORS[Math.floor(Math.random() * TASK_COLORS.length)],
 });
 
@@ -38,6 +40,7 @@ export default function NewPage() {
   const [requiresProof, setRequiresProof] = useState(true);
   const [hasDeadline, setHasDeadline] = useState(false);
   const [deadlineTime, setDeadlineTime] = useState('21:00');
+  const [expandedDeadlineId, setExpandedDeadlineId] = useState(null);
   const [groupId, setGroupId] = useState(preGroupId || null);
   const [existingTasks, setExistingTasks] = useState([]); // existing tasks in selected group for redistribution
 
@@ -126,7 +129,7 @@ export default function NewPage() {
     try {
       const { group } = await api.createGroup({ name: groupName, description: groupDesc, color: groupColor });
       for (const h of balanced) {
-        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: group.id });
+        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, deadlineTime: h.deadlineTime || null, groupId: group.id });
       }
       router.push(`/dashboard/groups/${group.id}`);
     } catch (err) {
@@ -169,7 +172,7 @@ export default function NewPage() {
         await api.updateTask(h.id, { weightage: h.weightage });
       }
       for (const h of newHabits) {
-        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: preGroupId });
+        await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, deadlineTime: h.deadlineTime || null, groupId: preGroupId });
       }
       router.push(`/dashboard/groups/${preGroupId}`);
     } catch (err) {
@@ -274,23 +277,35 @@ export default function NewPage() {
 
       {error && <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
 
-      {/* Mode Selection */}
+      {/* Mode Selection — group is primary, solo is a smaller secondary */}
       {mode === null && (
-        <div className="space-y-4">
-          <button onClick={() => setMode('habit')} className="w-full p-5 rounded-2xl glass-card hover:border-green-500/50 flex items-center gap-4 text-left transition-all">
-            <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center"><Target className="w-7 h-7 text-green-400" /></div>
-            <div>
-              <p className="font-semibold text-lg">Create Habit</p>
-              <p className="text-sm text-muted">Track a new daily or weekly habit</p>
+        <div className="space-y-6">
+          <button onClick={() => setMode('group')}
+            className="w-full p-6 rounded-3xl gradient-brand text-white text-left transition-all hover:opacity-95 shadow-lg shadow-brand-500/20">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+                <Users className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-xl">Create a group</p>
+                <p className="text-sm text-white/80 mt-0.5">Build habits with friends. Compete, react, and keep each other on track.</p>
+              </div>
             </div>
           </button>
-          <button onClick={() => setMode('group')} className="w-full p-5 rounded-2xl glass-card hover:border-purple-500/50 flex items-center gap-4 text-left transition-all">
-            <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center"><Users className="w-7 h-7 text-purple-400" /></div>
-            <div>
-              <p className="font-semibold text-lg">Create Group</p>
-              <p className="text-sm text-muted">Start an accountability group with habits</p>
-            </div>
-          </button>
+
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted font-semibold mb-2 text-center">Tracking solo for now?</p>
+            <button onClick={() => setMode('habit')}
+              className="w-full p-4 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-[var(--input-border)] flex items-center gap-3 text-left transition-all">
+              <div className="w-10 h-10 rounded-xl bg-[var(--card-bg-hover)] flex items-center justify-center shrink-0">
+                <Target className="w-5 h-5 text-muted" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">Add a personal habit</p>
+                <p className="text-xs text-muted">Just for you, no group needed</p>
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
@@ -530,8 +545,20 @@ export default function NewPage() {
                         ))}
                       </div>
                       <button type="button" onClick={() => updateHabit(habit.id, 'requiresProof', !habit.requiresProof)}
-                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
-                        <Camera className="w-3 h-3" /> Proof
+                        title={habit.requiresProof ? 'Photo proof required — tap to disable' : 'No photo proof — tap to require it'}
+                        className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border',
+                          habit.requiresProof
+                            ? 'bg-amber-500/20 text-amber-500 border-amber-500/40'
+                            : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary line-through opacity-70')}>
+                        {habit.requiresProof ? <Camera className="w-3 h-3" /> : <CameraOff className="w-3 h-3" />}
+                        Proof
+                      </button>
+                      <button type="button" onClick={() => {
+                          if (!habit.deadlineTime) updateHabit(habit.id, 'deadlineTime', '21:00');
+                          setExpandedDeadlineId(expandedDeadlineId === habit.id ? null : habit.id);
+                        }}
+                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.deadlineTime ? 'bg-blue-500/20 text-blue-500' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
+                        <Clock className="w-3 h-3" /> {habit.deadlineTime ? `by ${formatDeadline(habit.deadlineTime)}` : 'Deadline'}
                       </button>
                       <div className="flex gap-1">
                         {TASK_COLORS.map(c => (
@@ -540,6 +567,18 @@ export default function NewPage() {
                         ))}
                       </div>
                     </div>
+
+                    {expandedDeadlineId === habit.id && habit.deadlineTime && (
+                      <div className="flex flex-col items-center gap-2 pt-1">
+                        <HourPicker value={habit.deadlineTime} onChange={(t) => updateHabit(habit.id, 'deadlineTime', t)} accent="blue" />
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => { updateHabit(habit.id, 'deadlineTime', null); setExpandedDeadlineId(null); }}
+                            className="text-xs text-red-400 hover:text-red-300 font-medium">Remove deadline</button>
+                          <button type="button" onClick={() => setExpandedDeadlineId(null)}
+                            className="text-xs text-brand-500 hover:underline font-medium">Done</button>
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <input type="range" min="1" max={maxWeight} value={habit.weightage}
@@ -639,14 +678,37 @@ export default function NewPage() {
                           ))}
                         </div>
                         <button type="button" onClick={() => updateSetupHabit(habit.id, 'requiresProof', !habit.requiresProof)}
-                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.requiresProof ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
-                          <Camera className="w-3 h-3" /> Proof
+                          title={habit.requiresProof ? 'Photo proof required — tap to disable' : 'No photo proof — tap to require it'}
+                          className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border',
+                            habit.requiresProof
+                              ? 'bg-amber-500/20 text-amber-500 border-amber-500/40'
+                              : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary line-through opacity-70')}>
+                          {habit.requiresProof ? <Camera className="w-3 h-3" /> : <CameraOff className="w-3 h-3" />}
+                          Proof
+                        </button>
+                        <button type="button" onClick={() => {
+                            if (!habit.deadlineTime) updateSetupHabit(habit.id, 'deadlineTime', '21:00');
+                            setExpandedDeadlineId(expandedDeadlineId === habit.id ? null : habit.id);
+                          }}
+                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.deadlineTime ? 'bg-blue-500/20 text-blue-500' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
+                          <Clock className="w-3 h-3" /> {habit.deadlineTime ? `by ${formatDeadline(habit.deadlineTime)}` : 'Deadline'}
                         </button>
                         <div className="flex gap-1">
                           {TASK_COLORS.map(c => (
                             <button key={c} type="button" onClick={() => updateSetupHabit(habit.id, 'color', c)}
                               className={cn('w-5 h-5 rounded transition-transform hover:scale-125', habit.color === c && 'ring-2 ring-white ring-offset-1 ring-offset-surface-100')} style={{ backgroundColor: c }} />
                           ))}
+                        </div>
+                      </div>
+                    )}
+                    {expandedDeadlineId === habit.id && habit.deadlineTime && (
+                      <div className="flex flex-col items-center gap-2 pt-1">
+                        <HourPicker value={habit.deadlineTime} onChange={(t) => updateSetupHabit(habit.id, 'deadlineTime', t)} accent="blue" />
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => { updateSetupHabit(habit.id, 'deadlineTime', null); setExpandedDeadlineId(null); }}
+                            className="text-xs text-red-400 hover:text-red-300 font-medium">Remove deadline</button>
+                          <button type="button" onClick={() => setExpandedDeadlineId(null)}
+                            className="text-xs text-brand-500 hover:underline font-medium">Done</button>
                         </div>
                       </div>
                     )}
