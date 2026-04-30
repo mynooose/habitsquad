@@ -5,10 +5,24 @@ async function listNotifications(req, res, next) {
     const notifications = await prisma.notification.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: 100
     });
     const unreadCount = await prisma.notification.count({ where: { userId: req.user.id, read: false } });
     res.json({ notifications, unreadCount });
+  } catch (error) { next(error); }
+}
+
+async function clearAllRead(req, res, next) {
+  try {
+    // Delete read notifications that aren't pending-response actions.
+    const r = await prisma.notification.deleteMany({
+      where: {
+        userId: req.user.id,
+        read: true,
+        status: { not: 'PENDING' }
+      }
+    });
+    res.json({ success: true, deleted: r.count });
   } catch (error) { next(error); }
 }
 
@@ -69,4 +83,4 @@ async function respondToNotification(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { listNotifications, markAsRead, markAllRead, respondToNotification };
+module.exports = { listNotifications, markAsRead, markAllRead, respondToNotification, clearAllRead };

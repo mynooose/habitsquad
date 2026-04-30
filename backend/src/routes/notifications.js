@@ -8,6 +8,7 @@ router.use(authenticate);
 router.get('/', ctrl.listNotifications);
 router.post('/:id/read', ctrl.markAsRead);
 router.post('/read-all', ctrl.markAllRead);
+router.delete('/clear', ctrl.clearAllRead);
 router.post('/:id/respond', ctrl.respondToNotification);
 
 module.exports = router;
