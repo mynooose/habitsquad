@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
@@ -37,6 +37,8 @@ export default function GroupDetailPage() {
   const [tab, setTab] = useState('habits');
   const [period, setPeriod] = useState('week');
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copyingHabit, setCopyingHabit] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showLeave, setShowLeave] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -84,6 +86,35 @@ export default function GroupDetailPage() {
     navigator.clipboard.writeText(group?.inviteCode || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyLink = () => {
+    if (!group?.inviteCode || typeof window === 'undefined') return;
+    const link = `${window.location.origin}/join?code=${group.inviteCode}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyHabit = async (task) => {
+    if (!task || copyingHabit) return;
+    setCopyingHabit(task.id);
+    try {
+      await api.createTask({
+        title: task.title,
+        frequency: task.frequency,
+        weightage: 5,
+        color: task.color,
+        groupId: groupId,
+        requiresProof: task.requiresProof,
+        redistribute: true
+      });
+      await fetchData();
+    } catch (err) {
+      alert(err.message || 'Failed to copy habit');
+    } finally {
+      setCopyingHabit(null);
+    }
   };
 
   const handleLeave = async () => {
@@ -187,16 +218,20 @@ export default function GroupDetailPage() {
       </div>
 
 
-      {/* Invite Code */}
-      <div className="p-4 rounded-xl glass-card flex items-center gap-4 mb-6">
-        <div className="flex-1">
-          <p className="text-xs text-muted mb-1">Invite Code</p>
-          <code className="text-lg font-mono">{group.inviteCode}</code>
+      {/* Invite Code + Link */}
+      <div className="p-4 rounded-xl glass-card mb-6">
+        <p className="text-xs text-muted mb-2 font-semibold uppercase tracking-wider">Invite friends</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <code className="text-lg font-mono font-bold flex-1 min-w-0 truncate">{group.inviteCode}</code>
+          <button onClick={copyLink} className="px-4 py-2 rounded-lg gradient-brand text-white font-semibold flex items-center gap-2 text-sm hover:opacity-90 shrink-0">
+            {copiedLink ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+            {copiedLink ? 'Link copied!' : 'Copy invite link'}
+          </button>
+          <button onClick={copyCode} className="px-3 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] flex items-center gap-2 text-sm shrink-0">
+            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Code copied!' : 'Copy code'}
+          </button>
         </div>
-        <button onClick={copyCode} className="px-4 py-2 rounded-lg bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg-hover)] flex items-center gap-2 text-sm">
-          {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
       </div>
 
       {/* Tabs */}
@@ -316,6 +351,13 @@ export default function GroupDetailPage() {
                                 </button>
                               )}
                               <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-muted">{task.weightage}pts</div>
+                              {!isMe && (
+                                <button onClick={() => handleCopyHabit(task)} disabled={copyingHabit === task.id}
+                                  title="Copy this habit to my list"
+                                  className="p-1.5 rounded-lg hover:bg-brand-500/15 text-muted hover:text-brand-500 transition-colors disabled:opacity-50">
+                                  {copyingHabit === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
                               {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>
                           ))}
