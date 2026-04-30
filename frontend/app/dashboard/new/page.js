@@ -40,7 +40,8 @@ export default function NewPage() {
   const [requiresProof, setRequiresProof] = useState(true);
   const [hasDeadline, setHasDeadline] = useState(false);
   const [deadlineTime, setDeadlineTime] = useState('21:00');
-  const [expandedDeadlineId, setExpandedDeadlineId] = useState(null);
+  // { mode: 'group' | 'setup', id: habitId } — drives the shared deadline modal
+  const [editingDeadline, setEditingDeadline] = useState(null);
   const [groupId, setGroupId] = useState(preGroupId || null);
   const [existingTasks, setExistingTasks] = useState([]); // existing tasks in selected group for redistribution
 
@@ -555,10 +556,13 @@ export default function NewPage() {
                       </button>
                       <button type="button" onClick={() => {
                           if (!habit.deadlineTime) updateHabit(habit.id, 'deadlineTime', '21:00');
-                          setExpandedDeadlineId(expandedDeadlineId === habit.id ? null : habit.id);
+                          setEditingDeadline({ mode: 'group', id: habit.id });
                         }}
-                        className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.deadlineTime ? 'bg-blue-500/20 text-blue-500' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
-                        <Clock className="w-3 h-3" /> {habit.deadlineTime ? `by ${formatDeadline(habit.deadlineTime)}` : 'Deadline'}
+                        className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border whitespace-nowrap',
+                          habit.deadlineTime
+                            ? 'bg-blue-500/20 text-blue-500 border-blue-500/40'
+                            : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary')}>
+                        <Clock className="w-3 h-3" /> {habit.deadlineTime ? formatDeadline(habit.deadlineTime) : 'Deadline'}
                       </button>
                       <div className="flex gap-1">
                         {TASK_COLORS.map(c => (
@@ -567,18 +571,6 @@ export default function NewPage() {
                         ))}
                       </div>
                     </div>
-
-                    {expandedDeadlineId === habit.id && habit.deadlineTime && (
-                      <div className="flex flex-col items-center gap-2 pt-1">
-                        <HourPicker value={habit.deadlineTime} onChange={(t) => updateHabit(habit.id, 'deadlineTime', t)} accent="blue" />
-                        <div className="flex items-center gap-3">
-                          <button type="button" onClick={() => { updateHabit(habit.id, 'deadlineTime', null); setExpandedDeadlineId(null); }}
-                            className="text-xs text-red-400 hover:text-red-300 font-medium">Remove deadline</button>
-                          <button type="button" onClick={() => setExpandedDeadlineId(null)}
-                            className="text-xs text-brand-500 hover:underline font-medium">Done</button>
-                        </div>
-                      </div>
-                    )}
 
                     <div>
                       <input type="range" min="1" max={maxWeight} value={habit.weightage}
@@ -688,27 +680,19 @@ export default function NewPage() {
                         </button>
                         <button type="button" onClick={() => {
                             if (!habit.deadlineTime) updateSetupHabit(habit.id, 'deadlineTime', '21:00');
-                            setExpandedDeadlineId(expandedDeadlineId === habit.id ? null : habit.id);
+                            setEditingDeadline({ mode: 'setup', id: habit.id });
                           }}
-                          className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors', habit.deadlineTime ? 'bg-blue-500/20 text-blue-500' : 'bg-[var(--card-bg-hover)] text-muted hover:text-primary')}>
-                          <Clock className="w-3 h-3" /> {habit.deadlineTime ? `by ${formatDeadline(habit.deadlineTime)}` : 'Deadline'}
+                          className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors border whitespace-nowrap',
+                            habit.deadlineTime
+                              ? 'bg-blue-500/20 text-blue-500 border-blue-500/40'
+                              : 'bg-[var(--card-bg-hover)] text-muted border-transparent hover:text-primary')}>
+                          <Clock className="w-3 h-3" /> {habit.deadlineTime ? formatDeadline(habit.deadlineTime) : 'Deadline'}
                         </button>
                         <div className="flex gap-1">
                           {TASK_COLORS.map(c => (
                             <button key={c} type="button" onClick={() => updateSetupHabit(habit.id, 'color', c)}
                               className={cn('w-5 h-5 rounded transition-transform hover:scale-125', habit.color === c && 'ring-2 ring-white ring-offset-1 ring-offset-surface-100')} style={{ backgroundColor: c }} />
                           ))}
-                        </div>
-                      </div>
-                    )}
-                    {expandedDeadlineId === habit.id && habit.deadlineTime && (
-                      <div className="flex flex-col items-center gap-2 pt-1">
-                        <HourPicker value={habit.deadlineTime} onChange={(t) => updateSetupHabit(habit.id, 'deadlineTime', t)} accent="blue" />
-                        <div className="flex items-center gap-3">
-                          <button type="button" onClick={() => { updateSetupHabit(habit.id, 'deadlineTime', null); setExpandedDeadlineId(null); }}
-                            className="text-xs text-red-400 hover:text-red-300 font-medium">Remove deadline</button>
-                          <button type="button" onClick={() => setExpandedDeadlineId(null)}
-                            className="text-xs text-brand-500 hover:underline font-medium">Done</button>
                         </div>
                       </div>
                     )}
@@ -737,6 +721,42 @@ export default function NewPage() {
           </div>
         </div>
       )}
+
+      {/* Shared deadline picker modal — used by both group and setup bulk rows */}
+      {editingDeadline && (() => {
+        const list = editingDeadline.mode === 'setup' ? setupHabits : groupHabits;
+        const habit = list.find(h => h.id === editingDeadline.id);
+        if (!habit) return null;
+        const update = editingDeadline.mode === 'setup' ? updateSetupHabit : updateHabit;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setEditingDeadline(null)}>
+            <div className="w-full max-w-sm rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] p-5" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold">Deadline time</h2>
+                  <p className="text-xs text-muted">Mark overdue if not done by this time</p>
+                </div>
+              </div>
+              <div className="flex justify-center mb-4">
+                <HourPicker value={habit.deadlineTime || '21:00'} onChange={(t) => update(habit.id, 'deadlineTime', t)} accent="blue" />
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => { update(habit.id, 'deadlineTime', null); setEditingDeadline(null); }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/10 text-red-500 text-sm font-semibold hover:bg-red-500/20">
+                  Remove
+                </button>
+                <button type="button" onClick={() => setEditingDeadline(null)}
+                  className="flex-1 py-2.5 rounded-xl gradient-brand text-white text-sm font-semibold hover:opacity-90">
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
