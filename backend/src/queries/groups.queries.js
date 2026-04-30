@@ -31,7 +31,7 @@ async function findGroupById(id) {
   return prisma.group.findUnique({
     where: { id },
     include: {
-      createdBy: { select: { id: true, name: true } },
+      createdBy: { select: { id: true, name: true, avatar: true } },
       memberships: {
         include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
         orderBy: { joinedAt: 'asc' }

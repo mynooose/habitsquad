@@ -39,11 +39,13 @@ export default function GroupDetailPage() {
   const [period, setPeriod] = useState('week');
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [copyingHabit, setCopyingHabit] = useState(null);
   const [copyConfirm, setCopyConfirm] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showLeave, setShowLeave] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [memberMenuFor, setMemberMenuFor] = useState(null);
   const [transferTo, setTransferTo] = useState('');
   const [analytics, setAnalytics] = useState(null);
@@ -95,29 +97,30 @@ export default function GroupDetailPage() {
     const link = `${window.location.origin}/join?code=${group.inviteCode}`;
     const shareText = `Join my "${group.name}" group on HabitSquad: ${link}`;
 
-    // Prefer the native share sheet on mobile (works on http) — opens
-    // WhatsApp/SMS/etc. and is what users actually want.
-    if (navigator.share) {
+    // Prefer the native share sheet (HTTPS only — iOS Safari blocks on plain HTTP)
+    if (navigator.share && window.isSecureContext) {
       try {
         await navigator.share({ title: `Join "${group.name}" on HabitSquad`, text: shareText, url: link });
         return;
       } catch (err) {
-        if (err?.name === 'AbortError') return; // user cancelled the sheet
-        // fall through to clipboard
+        if (err?.name === 'AbortError') return;
       }
     }
+    // Fallback: open our custom share menu
+    setShowShare(true);
+  };
 
-    // Try modern Clipboard API (HTTPS only)
+  const copyLinkToClipboard = async () => {
+    if (!group?.inviteCode || typeof window === 'undefined') return;
+    const link = `${window.location.origin}/join?code=${group.inviteCode}`;
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(link);
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
+        setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000);
+        setShowShare(false);
         return;
       }
     } catch {}
-
-    // Fallback for plain HTTP / older browsers — use a hidden textarea + execCommand
     const ta = document.createElement('textarea');
     ta.value = link;
     ta.setAttribute('readonly', '');
@@ -129,10 +132,9 @@ export default function GroupDetailPage() {
     try { copied = document.execCommand('copy'); } catch {}
     document.body.removeChild(ta);
     if (copied) {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000);
+      setShowShare(false);
     } else {
-      // Last resort: show the link so the user can long-press and copy manually
       window.prompt('Copy this invite link:', link);
     }
   };
@@ -250,36 +252,27 @@ export default function GroupDetailPage() {
             {group.name.charAt(0)}
           </div>
         )}
-        <div className="flex-1 min-w-0">
+        <button onClick={() => setShowInfo(true)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold truncate">{group.name}</h1>
             {role === 'ADMIN' && <Crown className="w-5 h-5 text-yellow-500 shrink-0" />}
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
           </div>
-          {group.description && <p className="text-muted text-sm truncate">{group.description}</p>}
-        </div>
-        <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary" title="Group settings">
-          <Settings className="w-5 h-5" />
+          {group.description ? (
+            <p className="text-muted text-sm truncate">{group.description}</p>
+          ) : (
+            <p className="text-muted text-xs italic truncate">Tap for group info</p>
+          )}
         </button>
-        <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg gradient-brand font-medium hover:opacity-90">
+        <button onClick={copyLink} className="flex items-center gap-2 px-3 py-2 rounded-lg gradient-brand text-white text-sm font-semibold hover:opacity-90 shrink-0">
           <UserPlus className="w-4 h-4" /> Invite
         </button>
       </div>
 
 
-      {/* Invite */}
-      <button onClick={copyLink} className="w-full mb-6 p-4 rounded-xl glass-card flex items-center justify-between gap-3 hover:bg-[var(--card-bg-hover)] transition-colors group">
-        <div className="text-left min-w-0">
-          <p className="text-xs text-muted font-semibold uppercase tracking-wider">Invite friends</p>
-          <p className="text-sm text-muted mt-0.5 truncate">Tap to copy a shareable link</p>
-        </div>
-        <span className={cn('px-4 py-2 rounded-lg font-semibold flex items-center gap-2 text-sm shrink-0', copiedLink ? 'bg-green-500 text-white' : 'gradient-brand text-white group-hover:opacity-90')}>
-          {copiedLink ? <><Check className="w-4 h-4" /> Link copied!</> : <><Link2 className="w-4 h-4" /> Copy invite link</>}
-        </span>
-      </button>
-
       {/* Tabs */}
-      <div className="grid grid-cols-5 gap-1 mb-6 p-1 rounded-xl bg-[var(--card-bg)]">
-        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
+      <div className="grid grid-cols-4 gap-1 mb-6 p-1 rounded-xl bg-[var(--card-bg)]">
+        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={cn('flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-semibold transition-colors',
               tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg-hover)]')}>
@@ -485,85 +478,98 @@ export default function GroupDetailPage() {
         />
       )}
 
-      {/* Members Tab */}
-      {tab === 'members' && (
-        <div>
-          <div className="rounded-xl glass-card overflow-hidden mb-4">
-            {group.memberships?.map(m => (
-              <div key={m.user.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0 relative">
-                {m.user.avatar ? (
-                  <img src={m.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium">{getInitials(m.user.name)}</div>
-                )}
-                <div className="flex-1">
-                  <p className="font-medium">{m.user.name} {m.user.id === user?.id && <span className="text-muted">(You)</span>}</p>
-                  <p className="text-xs text-muted">{m.user.email}</p>
-                </div>
-                {m.role === 'ADMIN' && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full flex items-center gap-1"><Crown className="w-3 h-3" /> Admin</span>}
-                {m.user.id !== user?.id && role === 'ADMIN' && (
-                  <div className="relative">
-                    <button onClick={() => setMemberMenuFor(memberMenuFor === m.user.id ? null : m.user.id)} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                    {memberMenuFor === m.user.id && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setMemberMenuFor(null)} />
-                        <div className="absolute right-0 top-10 z-20 min-w-[180px] p-1 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
-                          {m.role === 'MEMBER' ? (
-                            <button onClick={() => handlePromote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
-                              <ShieldPlus className="w-4 h-4 text-yellow-500" /> Make admin
-                            </button>
-                          ) : (
-                            <button onClick={() => handleDemote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
-                              <Shield className="w-4 h-4 text-muted" /> Demote to member
-                            </button>
-                          )}
-                          <button onClick={() => { setMemberMenuFor(null); handleRemoveMember(m.user.id); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm text-red-400 text-left">
-                            <UserX className="w-4 h-4" /> Remove from group
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      {/* Invite Modal */}
+      {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
 
-          {group.invites?.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-muted mb-2">Pending Invites</h3>
-              <div className="rounded-xl glass-card overflow-hidden">
-                {group.invites.map(inv => (
-                  <div key={inv.id} className="flex items-center gap-4 p-4 border-b border-[var(--card-border)] last:border-0">
-                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center"><Mail className="w-4 h-4 text-muted" /></div>
-                    <div className="flex-1">
-                      <p className="font-medium">{inv.email}</p>
-                      <p className="text-xs text-muted">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">Pending</span>
-                    {role === 'ADMIN' && <button onClick={() => handleCancelInvite(inv.id)} className="text-xs text-muted hover:text-primary">Cancel</button>}
+      {/* Share sheet — WhatsApp + Copy link only */}
+      {showShare && (() => {
+        const link = `${window.location.origin}/join?code=${group.inviteCode}`;
+        const text = `Join my "${group.name}" group on HabitSquad: ${link}`;
+        const whatsappHref = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowShare(false)}>
+            <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] p-5 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold">Share invite</h2>
+                <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+                  onClick={() => setTimeout(() => setShowShare(false), 200)}
+                  className="w-full p-3 rounded-xl bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg)] flex items-center gap-3 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-[#25D366]/15 text-[#25D366] flex items-center justify-center text-xl">💬</div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold">WhatsApp</p>
+                    <p className="text-xs text-muted">Share via WhatsApp chat</p>
                   </div>
-                ))}
+                </a>
+                <button onClick={copyLinkToClipboard}
+                  className="w-full p-3 rounded-xl bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg)] flex items-center gap-3 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-500 flex items-center justify-center">
+                    {copiedLink ? <Check className="w-5 h-5" /> : <Link2 className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-semibold">{copiedLink ? 'Link copied!' : 'Copy link'}</p>
+                    <p className="text-xs text-muted truncate">{link}</p>
+                  </div>
+                </button>
+                <button onClick={() => { setShowShare(false); setShowInvite(true); }}
+                  className="w-full p-3 rounded-xl bg-[var(--card-bg-hover)] hover:bg-[var(--card-bg)] flex items-center gap-3 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center">
+                    <Search className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold">Find a user / email invite</p>
+                    <p className="text-xs text-muted">Search by name or invite via email</p>
+                  </div>
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        );
+      })()}
+
+      {/* Group Info Modal — opens when tapping the group name */}
+      {showInfo && (
+        <GroupInfoModal
+          group={group}
+          role={role}
+          currentUserId={user?.id}
+          memberMenuFor={memberMenuFor}
+          setMemberMenuFor={setMemberMenuFor}
+          onClose={() => setShowInfo(false)}
+          onSaved={fetchData}
+          onRemoveMember={handleRemoveMember}
+          onPromote={handlePromote}
+          onDemote={handleDemote}
+          onCancelInvite={handleCancelInvite}
+          onLeave={() => { setShowInfo(false); setShowLeave(true); }}
+          onEditSettings={() => { setShowInfo(false); setShowSettings(true); }}
+        />
       )}
 
-      {/* Leave Group — only on Members tab */}
-      {tab === 'members' && <div className="mt-8">
-        {showLeave ? (() => {
-          const adminCount = (group.memberships || []).filter(m => m.role === 'ADMIN').length;
-          const otherMembers = (group.memberships || []).filter(m => m.user.id !== user?.id);
-          const isSoleAdmin = role === 'ADMIN' && adminCount === 1 && otherMembers.length > 0;
-          return (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-              <p className="text-sm mb-3 font-medium">Leave this group?</p>
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal group={group} role={role} onClose={() => setShowSettings(false)} onSaved={fetchData} />}
+
+      {/* Leave Group Modal (existing flow) */}
+      {showLeave && (() => {
+        const adminCount = (group.memberships || []).filter(m => m.role === 'ADMIN').length;
+        const otherMembers = (group.memberships || []).filter(m => m.user.id !== user?.id);
+        const isSoleAdmin = role === 'ADMIN' && adminCount === 1 && otherMembers.length > 0;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => { setShowLeave(false); setTransferTo(''); }}>
+            <div className="w-full max-w-sm p-6 rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)]" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-red-500">
+                  <LogOut className="w-5 h-5" />
+                </div>
+                <h2 className="text-lg font-bold">Leave this group?</h2>
+              </div>
               {isSoleAdmin && (
                 <>
-                  <p className="text-xs text-muted mb-2">You're the only admin. Pick a successor, or leave it blank to auto-transfer to the highest-XP member.</p>
+                  <p className="text-xs text-muted mb-2">You're the only admin. Pick a successor or leave blank to auto-transfer to the highest-XP member.</p>
                   <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}
                     className="w-full mb-3 px-3 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--input-border)] text-sm">
                     <option value="">Auto-transfer (highest XP)</option>
@@ -572,25 +578,15 @@ export default function GroupDetailPage() {
                 </>
               )}
               <div className="flex gap-3">
-                <button onClick={() => { setShowLeave(false); setTransferTo(''); }} className="flex-1 py-2 rounded-lg bg-[var(--card-bg)] text-sm font-medium">Cancel</button>
-                <button onClick={handleLeave} disabled={leaving} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium disabled:opacity-50">
+                <button onClick={() => { setShowLeave(false); setTransferTo(''); }} className="flex-1 py-2.5 rounded-xl bg-[var(--card-bg)] text-sm font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
+                <button onClick={handleLeave} disabled={leaving} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold disabled:opacity-50">
                   {leaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Leave'}
                 </button>
               </div>
             </div>
-          );
-        })() : (
-          <button onClick={() => setShowLeave(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 text-sm">
-            <LogOut className="w-4 h-4" /> Leave Group
-          </button>
-        )}
-      </div>}
-
-      {/* Invite Modal */}
-      {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
-
-      {/* Settings Modal */}
-      {showSettings && <SettingsModal group={group} role={role} onClose={() => setShowSettings(false)} onSaved={fetchData} />}
+          </div>
+        );
+      })()}
 
       {/* Copy Habit Confirmation */}
       {copyConfirm && (
@@ -815,6 +811,143 @@ function InviteModal({ group, onClose, onInvited }) {
         )}
 
         <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Done</button>
+      </div>
+    </div>
+  );
+}
+
+function GroupInfoModal({ group, role, currentUserId, memberMenuFor, setMemberMenuFor, onClose, onSaved, onRemoveMember, onPromote, onDemote, onCancelInvite, onLeave, onEditSettings }) {
+  const isAdmin = role === 'ADMIN';
+  const memberships = group.memberships || [];
+  const invites = group.invites || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] animate-slide-up" onClick={e => e.stopPropagation()}>
+        {/* Hero header */}
+        <div className="relative">
+          <div className="aspect-square w-full max-h-[280px] flex items-center justify-center text-6xl font-bold overflow-hidden"
+            style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
+            {group.image ? (
+              <img src={group.image} alt={group.name} className="w-full h-full object-cover" />
+            ) : (
+              <span style={{ color: group.color || '#8b5cf6' }}>{group.name.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <button onClick={onClose} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Name + description */}
+          <div>
+            <div className="flex items-start gap-2">
+              <h2 className="text-xl font-bold flex-1 break-words">{group.name}</h2>
+              {role === 'ADMIN' && <Crown className="w-5 h-5 text-yellow-500 mt-1 shrink-0" />}
+            </div>
+            {group.description ? (
+              <p className="text-sm text-muted mt-1">{group.description}</p>
+            ) : (
+              <p className="text-sm text-muted italic mt-1">No description</p>
+            )}
+
+            {/* Creation meta */}
+            <div className="flex items-center gap-2 mt-3 text-xs text-muted">
+              {group.createdBy?.avatar ? (
+                <img src={group.createdBy.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-[9px] font-bold">
+                  {group.createdBy?.name ? getInitials(group.createdBy.name) : '?'}
+                </div>
+              )}
+              <span>
+                Created by <span className="font-medium text-primary">{group.createdBy?.id === currentUserId ? 'you' : (group.createdBy?.name || 'someone')}</span>
+                {' '}on{' '}
+                <span className="font-medium text-primary">
+                  {new Date(group.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>
+              </span>
+            </div>
+
+            <button onClick={onEditSettings} className="mt-3 text-xs text-brand-500 hover:underline font-semibold flex items-center gap-1">
+              <Settings className="w-3.5 h-3.5" /> Edit group info
+            </button>
+          </div>
+
+          {/* Members */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Members ({memberships.length})</p>
+            <div className="rounded-xl glass-card overflow-hidden">
+              {memberships.map(m => (
+                <div key={m.user.id} className="flex items-center gap-3 p-3 border-b border-[var(--card-border)] last:border-0 relative">
+                  {m.user.avatar ? (
+                    <img src={m.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-sm font-medium shrink-0">{getInitials(m.user.name)}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{m.user.id === currentUserId ? 'You' : m.user.name}</p>
+                    <p className="text-xs text-muted truncate">{m.user.email}</p>
+                  </div>
+                  {m.role === 'ADMIN' && <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold shrink-0"><Crown className="w-3 h-3" /> Admin</span>}
+                  {m.user.id !== currentUserId && isAdmin && (
+                    <div className="relative shrink-0">
+                      <button onClick={() => setMemberMenuFor(memberMenuFor === m.user.id ? null : m.user.id)} className="p-2 rounded-lg hover:bg-[var(--card-bg-hover)]">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {memberMenuFor === m.user.id && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setMemberMenuFor(null)} />
+                          <div className="absolute right-0 top-10 z-40 min-w-[180px] p-1 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
+                            {m.role === 'MEMBER' ? (
+                              <button onClick={() => onPromote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
+                                <ShieldPlus className="w-4 h-4 text-yellow-500" /> Make admin
+                              </button>
+                            ) : (
+                              <button onClick={() => onDemote(m.user.id)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm text-left">
+                                <Shield className="w-4 h-4 text-muted" /> Demote to member
+                              </button>
+                            )}
+                            <button onClick={() => { setMemberMenuFor(null); onRemoveMember(m.user.id); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm text-red-400 text-left">
+                              <UserX className="w-4 h-4" /> Remove from group
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pending invites */}
+          {invites.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Pending Invites</p>
+              <div className="rounded-xl glass-card overflow-hidden">
+                {invites.map(inv => (
+                  <div key={inv.id} className="flex items-center gap-3 p-3 border-b border-[var(--card-border)] last:border-0">
+                    <div className="w-10 h-10 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center shrink-0"><Mail className="w-4 h-4 text-muted" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{inv.email}</p>
+                      <p className="text-xs text-muted">Invited {new Date(inv.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-bold shrink-0">Pending</span>
+                    {isAdmin && <button onClick={() => onCancelInvite(inv.id)} className="text-xs text-muted hover:text-red-400 font-medium">Cancel</button>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Leave group */}
+          <button onClick={onLeave}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-sm font-semibold">
+            <LogOut className="w-4 h-4" /> Leave Group
+          </button>
+        </div>
       </div>
     </div>
   );
