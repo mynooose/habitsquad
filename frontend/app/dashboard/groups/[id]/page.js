@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus, ImagePlus } from 'lucide-react';
 import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
 
 const MEMBER_COLORS = [
@@ -74,7 +74,7 @@ export default function GroupDetailPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    if (tab !== 'analytics' || !groupId) return;
+    if ((tab !== 'analytics' && tab !== 'activity') || !groupId) return;
     let cancelled = false;
     setAnalyticsLoading(true);
     api.getGroupAnalytics(groupId, 30).then(res => { if (!cancelled) setAnalytics(res); })
@@ -218,25 +218,20 @@ export default function GroupDetailPage() {
       </div>
 
 
-      {/* Invite Code + Link */}
-      <div className="p-4 rounded-xl glass-card mb-6">
-        <p className="text-xs text-muted mb-2 font-semibold uppercase tracking-wider">Invite friends</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <code className="text-lg font-mono font-bold flex-1 min-w-0 truncate">{group.inviteCode}</code>
-          <button onClick={copyLink} className="px-4 py-2 rounded-lg gradient-brand text-white font-semibold flex items-center gap-2 text-sm hover:opacity-90 shrink-0">
-            {copiedLink ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-            {copiedLink ? 'Link copied!' : 'Copy invite link'}
-          </button>
-          <button onClick={copyCode} className="px-3 py-2 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] flex items-center gap-2 text-sm shrink-0">
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Code copied!' : 'Copy code'}
-          </button>
+      {/* Invite */}
+      <button onClick={copyLink} className="w-full mb-6 p-4 rounded-xl glass-card flex items-center justify-between gap-3 hover:bg-[var(--card-bg-hover)] transition-colors group">
+        <div className="text-left min-w-0">
+          <p className="text-xs text-muted font-semibold uppercase tracking-wider">Invite friends</p>
+          <p className="text-sm text-muted mt-0.5 truncate">Tap to copy a shareable link</p>
         </div>
-      </div>
+        <span className={cn('px-4 py-2 rounded-lg font-semibold flex items-center gap-2 text-sm shrink-0', copiedLink ? 'bg-green-500 text-white' : 'gradient-brand text-white group-hover:opacity-90')}>
+          {copiedLink ? <><Check className="w-4 h-4" /> Link copied!</> : <><Link2 className="w-4 h-4" /> Copy invite link</>}
+        </span>
+      </button>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
-        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
+        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
@@ -413,11 +408,20 @@ export default function GroupDetailPage() {
         </div>
       )}
 
+      {/* Activity Tab */}
+      {tab === 'activity' && (
+        <ActivityTab
+          analytics={analytics}
+          setAnalytics={setAnalytics}
+          loading={analyticsLoading}
+          currentUserId={user?.id}
+        />
+      )}
+
       {/* Analytics Tab */}
       {tab === 'analytics' && (
         <AnalyticsTab
           analytics={analytics}
-          setAnalytics={setAnalytics}
           loading={analyticsLoading}
           currentUserId={user?.id}
           expandedMember={expandedAnalyticsMember}
@@ -578,12 +582,18 @@ function ProofModal({ task, onClose, onSubmit }) {
             <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-primary">Change photo</button>
           </div>
         ) : (
-          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
-            <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
-            <p className="text-sm text-muted">Click to upload photo</p>
-            <p className="text-xs text-muted mt-1">JPG, PNG — max 20MB</p>
-            <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
-          </label>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <label className="p-5 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
+              <Camera className="w-7 h-7 mx-auto mb-1.5 text-muted" />
+              <p className="text-sm font-medium">Take photo</p>
+              <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+            </label>
+            <label className="p-5 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
+              <ImagePlus className="w-7 h-7 mx-auto mb-1.5 text-muted" />
+              <p className="text-sm font-medium">From gallery</p>
+              <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </label>
+          </div>
         )}
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium hover:bg-[var(--card-bg-hover)]">Cancel</button>
@@ -792,38 +802,7 @@ function SettingsModal({ group, onClose, onSaved }) {
 
 const REACTION_EMOJIS = ['🎉', '💪', '🔥', '❤️', '👏'];
 
-function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expandedMember, setExpandedMember }) {
-  const [pickerFor, setPickerFor] = useState(null);
-
-  const applyLocalReaction = (completionId, emoji) => {
-    setAnalytics(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        activityFeed: prev.activityFeed.map(a => {
-          if (a.completionId !== completionId) return a;
-          const my = new Set(a.myReactions || []);
-          const counts = { ...(a.reactions || {}) };
-          if (my.has(emoji)) {
-            my.delete(emoji);
-            counts[emoji] = Math.max(0, (counts[emoji] || 1) - 1);
-            if (counts[emoji] === 0) delete counts[emoji];
-          } else {
-            my.add(emoji);
-            counts[emoji] = (counts[emoji] || 0) + 1;
-          }
-          return { ...a, reactions: counts, myReactions: Array.from(my) };
-        })
-      };
-    });
-  };
-
-  const toggleReaction = async (completionId, emoji) => {
-    applyLocalReaction(completionId, emoji);
-    setPickerFor(null);
-    try { await api.toggleReaction(completionId, emoji); }
-    catch { applyLocalReaction(completionId, emoji); } // revert
-  };
+function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setExpandedMember }) {
 
   if (loading && !analytics) {
     return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
@@ -987,84 +966,125 @@ function AnalyticsTab({ analytics, setAnalytics, loading, currentUserId, expande
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--card-bg-hover)]" />No habits</span>
         </div>
       </section>
-
-      {/* Activity feed */}
-      <div>
-        <h2 className="font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Recent Activity</h2>
-        {activityFeed.length === 0 ? (
-          <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet.</div>
-        ) : (
-          <div className="rounded-2xl glass-card overflow-hidden">
-            {activityFeed.map((a) => {
-              const activeReactions = Object.entries(a.reactions || {}).filter(([, n]) => n > 0);
-              const isMine = a.userId === currentUserId;
-              return (
-                <div key={a.completionId} className="p-3 border-b border-[var(--card-border)] last:border-0">
-                  <div className="flex items-center gap-3">
-                    {a.userAvatar ? (
-                      <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-xs font-bold shrink-0">{getInitials(a.userName)}</div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">
-                        <span className="font-semibold">{isMine ? 'You' : a.userName}</span>
-                        {' '}completed{' '}
-                        <span className="font-medium">{a.taskTitle}</span>
-                      </p>
-                      <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                    </div>
-                    {a.proofUrl && (
-                      <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
-                    )}
-                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-2 ml-12 flex-wrap">
-                    {activeReactions.map(([emoji, count]) => {
-                      const mine = (a.myReactions || []).includes(emoji);
-                      return (
-                        <button key={emoji} type="button"
-                          disabled={isMine}
-                          onClick={() => !isMine && toggleReaction(a.completionId, emoji)}
-                          className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
-                            mine ? 'bg-brand-500/15 border border-brand-500/40 text-brand-500' : 'bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)]',
-                            isMine && 'cursor-default')}>
-                          <span>{emoji}</span><span className="tabular-nums">{count}</span>
-                        </button>
-                      );
-                    })}
-                    {!isMine && (
-                      <div className="relative">
-                        <button type="button" onClick={() => setPickerFor(pickerFor === a.completionId ? null : a.completionId)}
-                          className="px-2 py-0.5 rounded-full text-xs bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)] text-muted">
-                          +
-                        </button>
-                        {pickerFor === a.completionId && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setPickerFor(null)} />
-                            <div className="absolute left-0 top-7 z-20 flex items-center gap-1 p-1.5 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
-                              {REACTION_EMOJIS.map(e => {
-                                const mine = (a.myReactions || []).includes(e);
-                                return (
-                                  <button key={e} type="button" onClick={() => toggleReaction(a.completionId, e)}
-                                    className={cn('w-9 h-9 rounded-lg text-lg transition-transform hover:scale-125', mine && 'bg-brand-500/15')}>
-                                    {e}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
+  );
+}
+
+function ActivityTab({ analytics, setAnalytics, loading, currentUserId }) {
+  const [pickerFor, setPickerFor] = useState(null);
+
+  const applyLocalReaction = (completionId, emoji) => {
+    setAnalytics(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        activityFeed: prev.activityFeed.map(a => {
+          if (a.completionId !== completionId) return a;
+          const my = new Set(a.myReactions || []);
+          const counts = { ...(a.reactions || {}) };
+          if (my.has(emoji)) {
+            my.delete(emoji);
+            counts[emoji] = Math.max(0, (counts[emoji] || 1) - 1);
+            if (counts[emoji] === 0) delete counts[emoji];
+          } else {
+            my.add(emoji);
+            counts[emoji] = (counts[emoji] || 0) + 1;
+          }
+          return { ...a, reactions: counts, myReactions: Array.from(my) };
+        })
+      };
+    });
+  };
+
+  const toggleReaction = async (completionId, emoji) => {
+    applyLocalReaction(completionId, emoji);
+    setPickerFor(null);
+    try { await api.toggleReaction(completionId, emoji); }
+    catch { applyLocalReaction(completionId, emoji); }
+  };
+
+  if (loading && !analytics) {
+    return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+  }
+  if (!analytics) return null;
+
+  const { activityFeed } = analytics;
+  return (
+    <section>
+      <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Activity className="w-5 h-5 text-brand-500" /> Recent Activity</h2>
+      {activityFeed.length === 0 ? (
+        <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet — be the first.</div>
+      ) : (
+        <div className="rounded-2xl glass-card overflow-hidden">
+          {activityFeed.map((a) => {
+            const activeReactions = Object.entries(a.reactions || {}).filter(([, n]) => n > 0);
+            const isMine = a.userId === currentUserId;
+            return (
+              <div key={a.completionId} className="p-3 border-b border-[var(--card-border)] last:border-0">
+                <div className="flex items-center gap-3">
+                  {a.userAvatar ? (
+                    <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-xs font-bold shrink-0">{getInitials(a.userName)}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">
+                      <span className="font-semibold">{isMine ? 'You' : a.userName}</span>
+                      {' '}completed{' '}
+                      <span className="font-medium">{a.taskTitle}</span>
+                    </p>
+                    <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                  </div>
+                  {a.proofUrl && (
+                    <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
+                  )}
+                  <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                </div>
+                <div className="flex items-center gap-1.5 mt-2 ml-12 flex-wrap">
+                  {activeReactions.map(([emoji, count]) => {
+                    const mine = (a.myReactions || []).includes(emoji);
+                    return (
+                      <button key={emoji} type="button"
+                        disabled={isMine}
+                        onClick={() => !isMine && toggleReaction(a.completionId, emoji)}
+                        className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
+                          mine ? 'bg-brand-500/15 border border-brand-500/40 text-brand-500' : 'bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)]',
+                          isMine && 'cursor-default')}>
+                        <span>{emoji}</span><span className="tabular-nums">{count}</span>
+                      </button>
+                    );
+                  })}
+                  {!isMine && (
+                    <div className="relative">
+                      <button type="button" onClick={() => setPickerFor(pickerFor === a.completionId ? null : a.completionId)}
+                        className="px-2 py-0.5 rounded-full text-xs bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)] text-muted">
+                        +
+                      </button>
+                      {pickerFor === a.completionId && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setPickerFor(null)} />
+                          <div className="absolute left-0 top-7 z-20 flex items-center gap-1 p-1.5 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
+                            {REACTION_EMOJIS.map(e => {
+                              const mine = (a.myReactions || []).includes(e);
+                              return (
+                                <button key={e} type="button" onClick={() => toggleReaction(a.completionId, e)}
+                                  className={cn('w-9 h-9 rounded-lg text-lg transition-transform hover:scale-125', mine && 'bg-brand-500/15')}>
+                                  {e}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 

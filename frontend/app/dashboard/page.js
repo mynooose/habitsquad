@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info, ImagePlus } from 'lucide-react';
 import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS } from '@/lib/utils';
 
 function getLocalDateKey(d = new Date()) {
@@ -374,12 +374,18 @@ function ProofModal({ task, onClose, onSubmit }) {
             <button onClick={() => setPreview(null)} className="mt-2 text-sm text-muted hover:text-primary">Change photo</button>
           </div>
         ) : (
-          <label className="block mb-4 p-8 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
-            <Camera className="w-8 h-8 mx-auto mb-2 text-muted" />
-            <p className="text-sm text-muted">Click to upload photo</p>
-            <p className="text-xs text-muted mt-1">JPG, PNG — max 20MB</p>
-            <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
-          </label>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <label className="p-5 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
+              <Camera className="w-7 h-7 mx-auto mb-1.5 text-muted" />
+              <p className="text-sm font-medium">Take photo</p>
+              <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+            </label>
+            <label className="p-5 rounded-xl border-2 border-dashed border-[var(--input-border)] hover:border-brand-500 cursor-pointer text-center transition-colors">
+              <ImagePlus className="w-7 h-7 mx-auto mb-1.5 text-muted" />
+              <p className="text-sm font-medium">From gallery</p>
+              <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </label>
+          </div>
         )}
 
         <div className="flex gap-3">
