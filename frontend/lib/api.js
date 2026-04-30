@@ -86,6 +86,17 @@ class ApiClient {
     return data;
   }
 
+  async sendPhoneOtp(phone, name = null) {
+    const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return 'Asia/Kolkata'; } })();
+    return this.request('/auth/phone/send-otp', { method: 'POST', body: { phone, name, timezone: tz } });
+  }
+
+  async verifyPhoneOtp(phone, code) {
+    const data = await this.request('/auth/phone/verify-otp', { method: 'POST', body: { phone, code } });
+    if (data.token) this.setToken(data.token);
+    return data;
+  }
+
   async getNotifications() {
     return this.request('/notifications');
   }

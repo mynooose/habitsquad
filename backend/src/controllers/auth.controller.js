@@ -4,6 +4,7 @@ const { z } = require('zod');
 const { registerSchema, loginSchema } = require('../utils/validation');
 const { generateToken } = require('../middleware/auth');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/mailer');
+const { sendOtpSms, normalizePhone, generateOtp } = require('../utils/sms');
 const authQueries = require('../queries/auth.queries');
 const prisma = require('../database/prisma');
 
@@ -209,4 +210,99 @@ async function resetPassword(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { register, login, verifyEmail, resendVerification, getMe, updateMe, forgotPassword, resetPassword, deleteAccount };
+function hashOtp(otp, phone) {
+  return crypto.createHash('sha256').update(`${otp}:${phone}:${process.env.JWT_SECRET || 'fallback-secret-change-me'}`).digest('hex');
+}
+
+async function sendPhoneOtp(req, res, next) {
+  try {
+    const phone = normalizePhone(req.body?.phone);
+    if (!phone) return res.status(400).json({ error: 'Invalid phone number' });
+
+    const name = (typeof req.body?.name === 'string' && req.body.name.trim()) ? req.body.name.trim() : null;
+    const tz = (typeof req.body?.timezone === 'string' && req.body.timezone.length < 64) ? req.body.timezone : 'Asia/Kolkata';
+
+    let user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      // First-time signup via phone. Email is optional and can be added later in profile.
+      // Generate a placeholder email to satisfy NOT NULL + UNIQUE constraint.
+      const placeholderEmail = `phone+${phone}@habitsquad.local`;
+      user = await prisma.user.create({
+        data: {
+          email: placeholderEmail,
+          password: '!phone-only',
+          name: name || `User${phone.slice(-4)}`,
+          phone,
+          timezone: tz,
+          emailVerified: false
+        }
+      });
+    }
+
+    if (user.deletedAt) return res.status(403).json({ error: 'Account no longer active' });
+
+    const otp = generateOtp();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpHash: hashOtp(otp, phone),
+        otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+        otpAttempts: 0
+      }
+    });
+
+    try {
+      await sendOtpSms(phone, otp);
+    } catch (smsErr) {
+      console.error('SMS send failed:', smsErr.message);
+      return res.status(502).json({ error: 'Could not send the verification code right now. Please try again.' });
+    }
+
+    res.json({ success: true, message: 'OTP sent' });
+  } catch (error) { next(error); }
+}
+
+async function verifyPhoneOtp(req, res, next) {
+  try {
+    const phone = normalizePhone(req.body?.phone);
+    const code = String(req.body?.code || '').trim();
+    if (!phone) return res.status(400).json({ error: 'Invalid phone number' });
+    if (!/^\d{4,8}$/.test(code)) return res.status(400).json({ error: 'Invalid code' });
+
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user || user.deletedAt) return res.status(400).json({ error: 'Code expired or not requested. Try sending again.' });
+    if (!user.otpHash || !user.otpExpiry) return res.status(400).json({ error: 'Code expired or not requested. Try sending again.' });
+    if (user.otpExpiry < new Date()) return res.status(400).json({ error: 'Code expired. Send a new one.' });
+    if ((user.otpAttempts || 0) >= 5) return res.status(429).json({ error: 'Too many attempts. Send a new code.' });
+
+    const expected = hashOtp(code, phone);
+    if (expected !== user.otpHash) {
+      await prisma.user.update({ where: { id: user.id }, data: { otpAttempts: { increment: 1 } } });
+      return res.status(400).json({ error: 'Incorrect code' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpHash: null,
+        otpExpiry: null,
+        otpAttempts: 0,
+        phoneVerified: true,
+        emailVerified: user.email.includes('@habitsquad.local') ? user.emailVerified : true
+      }
+    });
+
+    const token = generateToken(user.id);
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id, email: user.email, name: user.name, avatar: user.avatar,
+        createdAt: user.createdAt, totalXp: user.totalXp, onboardedAt: user.onboardedAt,
+        phone: user.phone
+      }
+    });
+  } catch (error) { next(error); }
+}
+
+module.exports = { register, login, verifyEmail, resendVerification, getMe, updateMe, forgotPassword, resetPassword, deleteAccount, sendPhoneOtp, verifyPhoneOtp };

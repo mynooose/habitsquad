@@ -26,6 +26,11 @@ model User {
   dailyEmailTime    String   @default("07:00")
   onboardedAt       DateTime?
   deletedAt         DateTime?
+  phone             String?  @unique
+  phoneVerified     Boolean  @default(false)
+  otpHash           String?
+  otpExpiry         DateTime?
+  otpAttempts       Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt DateTime @updatedAt
 
