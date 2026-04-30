@@ -81,7 +81,8 @@ async function getCalendar(req, res, next) {
         score: totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0,
         tasks: applicableTasks.map(t => ({
           id: t.id, title: t.title, color: t.color, weightage: t.weightage, frequency: t.frequency,
-          requiresProof: t.requiresProof, groupId: t.groupId, groupName: t.group?.name || null, groupColor: t.group?.color || null,
+          requiresProof: t.requiresProof, deadlineTime: t.deadlineTime,
+          groupId: t.groupId, groupName: t.group?.name || null, groupColor: t.group?.color || null,
           completed: completedTaskIds.has(t.id)
         }))
       };

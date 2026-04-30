@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info, ImagePlus } from 'lucide-react';
-import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS } from '@/lib/utils';
+import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info, ImagePlus, Clock } from 'lucide-react';
+import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS, formatDeadline, isPastDeadline } from '@/lib/utils';
 
 function getLocalDateKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -105,7 +105,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted mt-0.5">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
         <Link href="/dashboard/new" className="btn-primary px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Habit
+          <Plus className="w-4 h-4" /> Add New
         </Link>
       </div>
 
@@ -431,7 +431,18 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
             <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
             <div className="flex-1 min-w-0">
               <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
-              <p className="text-xs text-muted">{getFrequencyLabel(task.frequency)}</p>
+              <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+                <span>{getFrequencyLabel(task.frequency)}</span>
+                {task.deadlineTime && (
+                  <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
+                    task.completedToday ? 'bg-[var(--card-bg-hover)] text-muted' :
+                    isPastDeadline(task.deadlineTime) ? 'bg-red-500/15 text-red-400' :
+                    'bg-blue-500/15 text-blue-400')}>
+                    <Clock className="w-3 h-3" />
+                    {isPastDeadline(task.deadlineTime) && !task.completedToday ? `Overdue ${formatDeadline(task.deadlineTime)}` : `by ${formatDeadline(task.deadlineTime)}`}
+                  </span>
+                )}
+              </p>
             </div>
             {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
             {task.proofUrl && task.completedToday && (

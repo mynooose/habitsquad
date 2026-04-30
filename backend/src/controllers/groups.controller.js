@@ -170,7 +170,7 @@ async function getMemberTasks(req, res, next) {
       const tasks = tasksByUser[m.userId] || [];
       const tasksWithStatus = tasks.map(t => ({
         id: t.id, title: t.title, frequency: t.frequency, weightage: t.weightage, color: t.color,
-        requiresProof: t.requiresProof, groupId: t.groupId, group: t.group,
+        requiresProof: t.requiresProof, deadlineTime: t.deadlineTime, groupId: t.groupId, group: t.group,
         completedToday: t.completions.length > 0,
         proofUrl: t.completions[0]?.proofUrl || null
       }));
@@ -204,7 +204,11 @@ async function getAnalytics(req, res, next) {
         where: { userId: { in: memberIds }, task: { groupId: req.params.id }, date: { gte: startDate, lt: tomorrow } },
         include: {
           task: { select: { id: true, title: true, color: true, weightage: true, isActive: true } },
-          reactions: { select: { emoji: true, userId: true } }
+          reactions: { select: { emoji: true, userId: true } },
+          comments: {
+            include: { user: { select: { id: true, name: true, avatar: true } } },
+            orderBy: { createdAt: 'asc' }
+          }
         },
         orderBy: { createdAt: 'desc' }
       }),
@@ -313,10 +317,10 @@ async function getAnalytics(req, res, next) {
     const memberUserMap = Object.fromEntries(members.map(m => [m.userId, m.user]));
     const activityFeed = allCompletions.slice(0, 20).map(c => {
       const counts = {};
-      const mine = new Set();
+      let myEmoji = null;
       (c.reactions || []).forEach(r => {
         counts[r.emoji] = (counts[r.emoji] || 0) + 1;
-        if (r.userId === req.user.id) mine.add(r.emoji);
+        if (r.userId === req.user.id) myEmoji = r.emoji;
       });
       return {
         completionId: c.id,
@@ -330,7 +334,11 @@ async function getAnalytics(req, res, next) {
         date: dateKey(c.date),
         proofUrl: c.proofUrl || null,
         reactions: counts,
-        myReactions: Array.from(mine)
+        myEmoji,
+        comments: (c.comments || []).map(co => ({
+          id: co.id, body: co.body, createdAt: co.createdAt,
+          userId: co.userId, userName: co.user?.name || 'Member', userAvatar: co.user?.avatar || null
+        }))
       };
     });
 
@@ -452,8 +460,15 @@ async function updateMemberRole(req, res, next) {
 async function updateGroup(req, res, next) {
   try {
     const membership = await groupQ.findMembership(req.user.id, req.params.id);
-    if (!membership || membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only admins can update group' });
+    if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
+
     const data = createGroupSchema.partial().parse(req.body);
+
+    // Name change is admin-only. Other fields (description, color, image) any member can change.
+    if (data.name !== undefined && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only admins can change the group name' });
+    }
+
     const group = await groupQ.updateGroup(req.params.id, data);
     res.json({ group });
   } catch (error) {

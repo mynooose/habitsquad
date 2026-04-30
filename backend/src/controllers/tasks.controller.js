@@ -133,7 +133,27 @@ async function deleteTask(req, res, next) {
   try {
     const existing = await taskQ.findTaskById(req.params.id, req.user.id);
     if (!existing) return res.status(404).json({ error: 'Task not found' });
-    await taskQ.deleteTask(req.params.id);
+
+    // Redistribute remaining active tasks in the same bucket to fill 100 again.
+    const siblings = (await taskQ.findActiveTasksByUserAndGroup(req.user.id, existing.groupId || null))
+      .filter(t => t.id !== req.params.id);
+
+    if (siblings.length === 0) {
+      // No remaining tasks to redistribute — just delete.
+      await taskQ.deleteTask(req.params.id);
+      return res.json({ success: true });
+    }
+
+    const base = Math.floor(100 / siblings.length);
+    const remainder = 100 - (base * siblings.length);
+
+    await prisma.$transaction([
+      ...siblings.map((t, i) =>
+        prisma.task.update({ where: { id: t.id }, data: { weightage: base + (i < remainder ? 1 : 0) } })
+      ),
+      prisma.task.delete({ where: { id: req.params.id } })
+    ]);
+
     res.json({ success: true });
   } catch (error) {
     next(error);

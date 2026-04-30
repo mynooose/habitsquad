@@ -24,6 +24,23 @@ export function getDateKey(date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// "21:00" -> "9:00 PM"
+export function formatDeadline(time) {
+  if (!time || !/^\d{2}:\d{2}$/.test(time)) return '';
+  const [h, m] = time.split(':').map(Number);
+  const hour12 = h % 12 || 12;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return m === 0 ? `${hour12} ${ampm}` : `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+// Local now vs deadline time today.
+export function isPastDeadline(time) {
+  if (!time || !/^\d{2}:\d{2}$/.test(time)) return false;
+  const [h, m] = time.split(':').map(Number);
+  const now = new Date();
+  return now.getHours() > h || (now.getHours() === h && now.getMinutes() > m);
+}
+
 export function getScoreColor(score) {
   if (score >= 80) return 'text-green-400';
   if (score >= 60) return 'text-yellow-400';

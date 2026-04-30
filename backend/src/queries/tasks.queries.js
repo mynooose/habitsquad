@@ -36,9 +36,14 @@ async function createTask(data) {
 }
 
 async function updateTask(id, data) {
+  const { groupId, ...rest } = data;
+  const updateData = { ...rest };
+  if (groupId !== undefined) {
+    updateData.group = groupId ? { connect: { id: groupId } } : { disconnect: true };
+  }
   return prisma.task.update({
     where: { id },
-    data,
+    data: updateData,
     include: { group: { select: { id: true, name: true, color: true } } }
   });
 }

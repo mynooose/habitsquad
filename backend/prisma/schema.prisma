@@ -17,13 +17,13 @@ model User {
   gender    String?
   bio              String?  @db.Text
   totalXp           Int      @default(0)
-  dailyEmailEnabled Boolean  @default(false)
+  dailyEmailEnabled Boolean  @default(true)
   emailVerified     Boolean  @default(false)
   verifyToken       String?  @unique
   timezone          String   @default("UTC")
   resetToken        String?  @unique
   resetTokenExpiry  DateTime?
-  dailyEmailTime    String   @default("07:00")
+  dailyEmailTime    String   @default("08:00")
   onboardedAt       DateTime?
   deletedAt         DateTime?
   phone             String?  @unique
@@ -41,6 +41,7 @@ model User {
   sentInvites   GroupInvite[]    @relation("InviteSender")
   notifications Notification[]
   reactions     Reaction[]
+  comments      Comment[]
 
   @@map("users")
 }
@@ -71,6 +72,7 @@ model Task {
   weightage   Int           @default(5)
   isActive      Boolean       @default(true)
   requiresProof Boolean       @default(true)
+  deadlineTime  String?       // "HH:MM" 24-hour, in user's local timezone
   color         String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -110,6 +112,7 @@ model TaskCompletion {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   reactions Reaction[]
+  comments  Comment[]
 
   @@unique([taskId, date])
   @@map("task_completions")
@@ -191,7 +194,20 @@ model Reaction {
   emoji        String
   createdAt    DateTime @default(now())
 
-  @@unique([userId, completionId, emoji])
+  @@unique([userId, completionId])
   @@index([completionId])
   @@map("reactions")
+}
+
+model Comment {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completionId String
+  completion   TaskCompletion @relation(fields: [completionId], references: [id], onDelete: Cascade)
+  body         String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([completionId])
+  @@map("comments")
 }

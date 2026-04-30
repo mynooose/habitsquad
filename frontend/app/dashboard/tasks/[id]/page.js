@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Loader2, Check, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Trash2, Camera, Clock } from 'lucide-react';
+import HourPicker from '@/components/HourPicker';
 import { cn, TASK_COLORS, FREQUENCIES } from '@/lib/utils';
 
 export default function EditTaskPage() {
@@ -28,6 +29,8 @@ export default function EditTaskPage() {
   const [groupId, setGroupId] = useState(null);
   const [isActive, setIsActive] = useState(true);
   const [requiresProof, setRequiresProof] = useState(false);
+  const [hasDeadline, setHasDeadline] = useState(false);
+  const [deadlineTime, setDeadlineTime] = useState('21:00');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +47,7 @@ export default function EditTaskPage() {
         setGroupId(task.groupId);
         setIsActive(task.isActive);
         setRequiresProof(task.requiresProof || false);
+        if (task.deadlineTime) { setHasDeadline(true); setDeadlineTime(task.deadlineTime); }
         setGroups(g || []);
         const budgetRes = await api.getTaskBudget(task.groupId);
         setBudget(budgetRes);
@@ -71,7 +75,7 @@ export default function EditTaskPage() {
     setSaving(true);
     setError('');
     try {
-      await api.updateTask(taskId, { title, frequency, weightage, color, groupId, isActive, requiresProof });
+      await api.updateTask(taskId, { title, frequency, weightage, color, groupId, isActive, requiresProof, deadlineTime: hasDeadline ? deadlineTime : null });
       router.push('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -157,6 +161,25 @@ export default function EditTaskPage() {
             className={cn('w-12 h-7 rounded-full transition-colors relative', requiresProof ? 'bg-amber-500' : 'bg-[var(--card-bg-hover)]')}>
             <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', requiresProof ? 'translate-x-6' : 'translate-x-1')} />
           </button>
+        </div>
+
+        <div className="p-4 rounded-xl glass-card space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium flex items-center gap-2"><Clock className="w-4 h-4 text-blue-400" /> Deadline time</p>
+              <p className="text-sm text-muted">Mark overdue if not done by this time</p>
+            </div>
+            <button type="button" onClick={() => setHasDeadline(!hasDeadline)}
+              className={cn('w-12 h-7 rounded-full transition-colors relative', hasDeadline ? 'bg-blue-500' : 'bg-[var(--card-bg-hover)]')}>
+              <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', hasDeadline ? 'translate-x-6' : 'translate-x-1')} />
+            </button>
+          </div>
+          {hasDeadline && (
+            <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
+              <span className="text-sm text-muted">Complete by</span>
+              <HourPicker value={deadlineTime} onChange={setDeadlineTime} accent="blue" />
+            </div>
+          )}
         </div>
 
         <div>

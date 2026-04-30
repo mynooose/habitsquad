@@ -112,7 +112,7 @@ async function sendDailyEmails() {
               </a>
             </div>
             <p style="color:#555;font-size:11px;text-align:center;margin-top:20px;">
-              You're receiving this because you enabled daily reminders in HabitSquad.
+              Don't want this reminder? Turn it off any time in your <a href="${process.env.FRONTEND_URL}/dashboard/profile" style="color:#888;text-decoration:underline;">profile settings</a>.
             </p>
           </div>
         `;

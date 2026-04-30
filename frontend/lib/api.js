@@ -256,6 +256,14 @@ class ApiClient {
     return this.request(`/completions/${completionId}/reactions`, { method: 'POST', body: { emoji } });
   }
 
+  async addComment(completionId, body) {
+    return this.request(`/completions/${completionId}/comments`, { method: 'POST', body: { body } });
+  }
+
+  async deleteComment(commentId) {
+    return this.request(`/comments/${commentId}`, { method: 'DELETE' });
+  }
+
   async inviteToGroup(groupId, data) {
     return this.request(`/groups/${groupId}/invite`, { method: 'POST', body: data });
   }

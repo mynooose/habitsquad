@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Camera, Loader2, Check, User, Calendar, Mail, Clock, Zap, Edit2, X, Sparkles, Flame, Shield, Swords, Medal, Star, Gem, Trophy, Crown, Lock, Trash2 } from 'lucide-react';
 import ImageCropper from '@/components/ImageCropper';
+import HourPicker from '@/components/HourPicker';
 import { getLevel, LEVELS } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
@@ -402,8 +403,7 @@ export default function ProfilePage() {
               <span className="text-sm text-muted">Send at</span>
               {isEditing ? (
                 <>
-                  <input type="time" step="3600" value={dailyEmailTime} onChange={(e) => setDailyEmailTime(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500 text-sm" />
+                  <HourPicker value={dailyEmailTime} onChange={setDailyEmailTime} />
                   <span className="text-xs text-muted">in {timezone}</span>
                 </>
               ) : (

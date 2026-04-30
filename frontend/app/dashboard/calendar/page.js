@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera, ImagePlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera, ImagePlus, Clock } from 'lucide-react';
 // Link still used for group name links
-import { cn, getScoreColor, getScoreBgColor, getDateKey, isToday, getFrequencyLabel } from '@/lib/utils';
+import { cn, getScoreColor, getScoreBgColor, getDateKey, isToday, getFrequencyLabel, formatDeadline, isPastDeadline } from '@/lib/utils';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -305,7 +305,23 @@ function CalendarTask({ task, canToggle, completing, onToggle }) {
       <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
       <div className="flex-1 min-w-0">
         <p className={cn('text-sm truncate', t.completed ? 'text-muted line-through' : 'text-primary')}>{t.title}</p>
-        <p className="text-xs text-muted">{getFrequencyLabel(t.frequency)}</p>
+        <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+          <span>{getFrequencyLabel(t.frequency)}</span>
+          {t.deadlineTime && canToggle && (
+            <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
+              t.completed ? 'bg-[var(--card-bg-hover)] text-muted' :
+              isPastDeadline(t.deadlineTime) ? 'bg-red-500/15 text-red-400' :
+              'bg-blue-500/15 text-blue-400')}>
+              <Clock className="w-3 h-3" />
+              {isPastDeadline(t.deadlineTime) && !t.completed ? `Overdue ${formatDeadline(t.deadlineTime)}` : `by ${formatDeadline(t.deadlineTime)}`}
+            </span>
+          )}
+          {t.deadlineTime && !canToggle && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold bg-[var(--card-bg-hover)] text-muted">
+              <Clock className="w-3 h-3" /> by {formatDeadline(t.deadlineTime)}
+            </span>
+          )}
+        </p>
       </div>
       {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
     </div>

@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw, Camera } from 'lucide-react';
+import { ArrowLeft, Target, Users, Loader2, Check, AlertCircle, Plus, Trash2, RotateCcw, Camera, Clock } from 'lucide-react';
+import HourPicker from '@/components/HourPicker';
 import { cn, TASK_COLORS, FREQUENCIES } from '@/lib/utils';
 
 const DEFAULT_HABIT = () => ({
@@ -35,6 +36,8 @@ export default function NewPage() {
   const [weightage, setWeightage] = useState(10);
   const [color, setColor] = useState(TASK_COLORS[0]);
   const [requiresProof, setRequiresProof] = useState(true);
+  const [hasDeadline, setHasDeadline] = useState(false);
+  const [deadlineTime, setDeadlineTime] = useState('21:00');
   const [groupId, setGroupId] = useState(preGroupId || null);
   const [existingTasks, setExistingTasks] = useState([]); // existing tasks in selected group for redistribution
 
@@ -96,7 +99,7 @@ export default function NewPage() {
     setLoading(true);
     setError('');
     try {
-      await api.createTask({ title, frequency, color, groupId, requiresProof, redistribute: true });
+      await api.createTask({ title, frequency, color, groupId, requiresProof, deadlineTime: hasDeadline ? deadlineTime : null, redistribute: true });
       router.push(groupId ? `/dashboard/groups/${groupId}` : '/dashboard');
     } catch (err) {
       setError(err.message);
@@ -108,20 +111,23 @@ export default function NewPage() {
   const handleCreateGroup = async () => {
     if (!groupName) return;
     const validHabits = groupHabits.filter(h => h.title.trim());
-    const totalWeight = validHabits.reduce((s, h) => s + h.weightage, 0);
-    if (totalWeight > 100) {
-      setError('Total weight exceeds 100. Adjust your habits.');
+    if (validHabits.length === 0) {
+      setError('Add at least one habit with a name.');
       return;
     }
+    // Empty rows in the builder may have absorbed weight via distributeEqual;
+    // re-balance so the actual valid habits total exactly 100.
+    const base = Math.floor(100 / validHabits.length);
+    const remainder = 100 - (base * validHabits.length);
+    const balanced = validHabits.map((h, i) => ({ ...h, weightage: base + (i < remainder ? 1 : 0) }));
+
     setLoading(true);
     setError('');
     try {
       const { group } = await api.createGroup({ name: groupName, description: groupDesc, color: groupColor });
-      // Create all habits for this group with their set weights
-      for (const h of validHabits) {
+      for (const h of balanced) {
         await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: group.id });
       }
-      // Note: group creation form already handles weight distribution (sum=100), no redistribute needed
       router.push(`/dashboard/groups/${group.id}`);
     } catch (err) {
       setError(err.message);
@@ -137,22 +143,31 @@ export default function NewPage() {
       router.push(`/dashboard/groups/${preGroupId}`);
       return;
     }
-    const totalWeight = allHabits.reduce((s, h) => s + h.weightage, 0);
-    if (totalWeight > 100) {
-      setError('Total weight exceeds 100. Adjust your habits.');
-      return;
-    }
+    // Re-balance valid rows so they total exactly 100 (empty rows may have absorbed weight).
+    const totalRaw = allHabits.reduce((s, h) => s + h.weightage, 0);
+    const balanced = totalRaw > 0
+      ? (() => {
+          // Scale weights so they sum to 100, rounded to integers, fixing rounding drift on the last row.
+          const scaled = allHabits.map(h => ({ ...h, weightage: Math.max(1, Math.round((h.weightage / totalRaw) * 100)) }));
+          const drift = 100 - scaled.reduce((s, h) => s + h.weightage, 0);
+          if (drift !== 0) scaled[scaled.length - 1].weightage = Math.max(1, scaled[scaled.length - 1].weightage + drift);
+          return scaled;
+        })()
+      : (() => {
+          const base = Math.floor(100 / allHabits.length);
+          const rem = 100 - (base * allHabits.length);
+          return allHabits.map((h, i) => ({ ...h, weightage: base + (i < rem ? 1 : 0) }));
+        })();
+
     setLoading(true);
     setError('');
     try {
-      // Update existing habits with new weights
-      const existingHabits = allHabits.filter(h => h.isExisting);
-      const newHabits = allHabits.filter(h => !h.isExisting);
+      const existingHabits = balanced.filter(h => h.isExisting);
+      const newHabits = balanced.filter(h => !h.isExisting);
 
       for (const h of existingHabits) {
         await api.updateTask(h.id, { weightage: h.weightage });
       }
-      // Create new habits with their set weights (no redistribute — we already calculated)
       for (const h of newHabits) {
         await api.createTask({ title: h.title, frequency: h.frequency, weightage: h.weightage, color: h.color, requiresProof: h.requiresProof, groupId: preGroupId });
       }
@@ -381,6 +396,28 @@ export default function NewPage() {
               className={cn('w-12 h-7 rounded-full transition-colors relative', requiresProof ? 'bg-amber-500' : 'bg-[var(--card-bg-hover)]')}>
               <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', requiresProof ? 'translate-x-6' : 'translate-x-1')} />
             </button>
+          </div>
+
+          <div className="p-4 rounded-xl glass-card space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-400" />
+                <div>
+                  <p className="text-sm font-medium">Deadline time</p>
+                  <p className="text-xs text-muted">Mark overdue if not done by this time</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setHasDeadline(!hasDeadline)}
+                className={cn('w-12 h-7 rounded-full transition-colors relative', hasDeadline ? 'bg-blue-500' : 'bg-[var(--card-bg-hover)]')}>
+                <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', hasDeadline ? 'translate-x-6' : 'translate-x-1')} />
+              </button>
+            </div>
+            {hasDeadline && (
+              <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
+                <span className="text-sm text-muted">Complete by</span>
+                <HourPicker value={deadlineTime} onChange={setDeadlineTime} accent="blue" />
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

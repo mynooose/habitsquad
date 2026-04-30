@@ -24,7 +24,7 @@ async function findActiveTasksForCalendar(userId) {
     where: { userId, isActive: true },
     select: {
       id: true, title: true, weightage: true, frequency: true, color: true, requiresProof: true,
-      createdAt: true, groupId: true,
+      deadlineTime: true, createdAt: true, groupId: true,
       group: { select: { id: true, name: true, color: true } }
     }
   });

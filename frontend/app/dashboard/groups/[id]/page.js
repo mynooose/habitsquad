@@ -5,8 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus, ImagePlus } from 'lucide-react';
-import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel } from '@/lib/utils';
+import { ArrowLeft, Users, Trophy, Crown, Copy, Check, Loader2, UserPlus, Mail, Search, Target, Plus, CheckCircle2, Circle, Edit2, LogOut, X, ChevronDown, ChevronRight, Zap, AlertTriangle, Star, Camera, Skull, MoreVertical, Settings, ShieldPlus, Shield, UserX, BarChart3, TrendingUp, TrendingDown, Activity, Flame, Hourglass, Link2, CopyPlus, ImagePlus, Clock } from 'lucide-react';
+import { cn, getFrequencyLabel, getScoreColor, TASK_COLORS, getInitials, getLevel, formatDeadline, isPastDeadline } from '@/lib/utils';
 import ImageCropper from '@/components/ImageCropper';
 
 const MEMBER_COLORS = [
@@ -40,6 +40,7 @@ export default function GroupDetailPage() {
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copyingHabit, setCopyingHabit] = useState(null);
+  const [copyConfirm, setCopyConfirm] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showLeave, setShowLeave] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -210,11 +211,9 @@ export default function GroupDetailPage() {
           </div>
           {group.description && <p className="text-muted text-sm truncate">{group.description}</p>}
         </div>
-        {role === 'ADMIN' && (
-          <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary" title="Group settings">
-            <Settings className="w-5 h-5" />
-          </button>
-        )}
+        <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary" title="Group settings">
+          <Settings className="w-5 h-5" />
+        </button>
         <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg gradient-brand font-medium hover:opacity-90">
           <UserPlus className="w-4 h-4" /> Invite
         </button>
@@ -233,10 +232,11 @@ export default function GroupDetailPage() {
       </button>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto -mx-2 px-2 pb-1 scrollbar-none">
+      <div className="grid grid-cols-5 gap-1 mb-6 p-1 rounded-xl bg-[var(--card-bg)]">
         {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }, { id: 'members', label: 'Members', icon: Users }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0', tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg)]')}>
+            className={cn('flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-semibold transition-colors',
+              tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg-hover)]')}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -335,9 +335,18 @@ export default function GroupDetailPage() {
                               <div className="w-1 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
                               <div className="flex-1 min-w-0">
                                 <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
-                                <p className="text-xs text-muted">
-                                  {getFrequencyLabel(task.frequency)}
-                                  {task.group && <span> &middot; {task.group.name}</span>}
+                                <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+                                  <span>{getFrequencyLabel(task.frequency)}</span>
+                                  {task.group && <span>&middot; {task.group.name}</span>}
+                                  {task.deadlineTime && (
+                                    <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
+                                      task.completedToday ? 'bg-[var(--card-bg-hover)] text-muted' :
+                                      isPastDeadline(task.deadlineTime) ? 'bg-red-500/15 text-red-400' :
+                                      'bg-blue-500/15 text-blue-400')}>
+                                      <Clock className="w-3 h-3" />
+                                      {isPastDeadline(task.deadlineTime) && !task.completedToday ? `Overdue ${formatDeadline(task.deadlineTime)}` : `by ${formatDeadline(task.deadlineTime)}`}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
@@ -349,7 +358,7 @@ export default function GroupDetailPage() {
                               )}
                               <div className="px-2 py-0.5 rounded bg-[var(--card-bg-hover)] text-xs text-muted">{task.weightage}pts</div>
                               {!isMe && (
-                                <button onClick={() => handleCopyHabit(task)} disabled={copyingHabit === task.id}
+                                <button onClick={() => setCopyConfirm({ task, fromName: member.user.name })} disabled={copyingHabit === task.id}
                                   title="Copy this habit to my list"
                                   className="p-1.5 rounded-lg hover:bg-brand-500/15 text-muted hover:text-brand-500 transition-colors disabled:opacity-50">
                                   {copyingHabit === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5" />}
@@ -417,6 +426,7 @@ export default function GroupDetailPage() {
           setAnalytics={setAnalytics}
           loading={analyticsLoading}
           currentUserId={user?.id}
+          onViewProof={setViewProof}
         />
       )}
 
@@ -536,7 +546,37 @@ export default function GroupDetailPage() {
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
 
       {/* Settings Modal */}
-      {showSettings && <SettingsModal group={group} onClose={() => setShowSettings(false)} onSaved={fetchData} />}
+      {showSettings && <SettingsModal group={group} role={role} onClose={() => setShowSettings(false)} onSaved={fetchData} />}
+
+      {/* Copy Habit Confirmation */}
+      {copyConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCopyConfirm(null)}>
+          <div className="w-full max-w-sm p-6 rounded-2xl bg-[var(--card-bg-solid)] border border-[var(--card-border)]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500">
+                <CopyPlus className="w-5 h-5" />
+              </div>
+              <h2 className="text-lg font-bold">Copy this habit?</h2>
+            </div>
+            <p className="text-sm text-muted mb-1">Add <span className="font-semibold text-primary">"{copyConfirm.task.title}"</span> to your habits in this group.</p>
+            <p className="text-xs text-muted mb-5">From {copyConfirm.fromName}'s list. Weightage will be balanced against your existing tasks.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setCopyConfirm(null)} disabled={!!copyingHabit}
+                className="flex-1 py-2.5 rounded-xl bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] font-medium text-sm">
+                Cancel
+              </button>
+              <button onClick={async () => {
+                  const t = copyConfirm.task;
+                  setCopyConfirm(null);
+                  await handleCopyHabit(t);
+                }} disabled={!!copyingHabit}
+                className="flex-1 py-2.5 rounded-xl gradient-brand text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                {copyingHabit ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CopyPlus className="w-4 h-4" /> Copy habit</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Proof Upload Modal */}
       {proofTask && <ProofModal task={proofTask} onClose={() => setProofTask(null)} onSubmit={(proofUrl) => handleToggle(proofTask, proofUrl)} />}
@@ -736,7 +776,8 @@ function InviteModal({ group, onClose, onInvited }) {
   );
 }
 
-function SettingsModal({ group, onClose, onSaved }) {
+function SettingsModal({ group, role, onClose, onSaved }) {
+  const isAdmin = role === 'ADMIN';
   const [name, setName] = useState(group.name || '');
   const [description, setDescription] = useState(group.description || '');
   const [color, setColor] = useState(group.color || TASK_COLORS[0]);
@@ -758,11 +799,13 @@ function SettingsModal({ group, onClose, onSaved }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Name is required'); return; }
+    if (isAdmin && !name.trim()) { setError('Name is required'); return; }
     setSaving(true);
     setError('');
     try {
-      await api.updateGroup(group.id, { name: name.trim(), description: description.trim() || null, color, image: image || null });
+      const payload = { description: description.trim() || null, color, image: image || null };
+      if (isAdmin) payload.name = name.trim();
+      await api.updateGroup(group.id, payload);
       onSaved();
       onClose();
     } catch (err) {
@@ -800,9 +843,12 @@ function SettingsModal({ group, onClose, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-muted">Name</label>
+            <label className="block text-sm font-medium mb-2 text-muted flex items-center gap-2">
+              Name {!isAdmin && <span className="text-[10px] font-normal text-muted/80 italic">(admins only)</span>}
+            </label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
+              disabled={!isAdmin}
+              className={cn('w-full px-4 py-3 rounded-xl bg-[var(--card-bg-hover)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500', !isAdmin && 'opacity-60 cursor-not-allowed')} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2 text-muted">Description</label>
@@ -825,7 +871,7 @@ function SettingsModal({ group, onClose, onSaved }) {
 
         <div className="flex gap-3 mt-6">
           <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-[var(--card-bg-hover)] font-medium">Cancel</button>
-          <button type="submit" disabled={saving || !name.trim() || uploadingImage} className="flex-1 py-3 rounded-xl btn-primary font-semibold disabled:opacity-50">
+          <button type="submit" disabled={saving || (isAdmin && !name.trim()) || uploadingImage} className="flex-1 py-3 rounded-xl btn-primary font-semibold disabled:opacity-50">
             {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Save'}
           </button>
         </div>
@@ -1025,37 +1071,71 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
   );
 }
 
-function ActivityTab({ analytics, setAnalytics, loading, currentUserId }) {
+function ActivityTab({ analytics, setAnalytics, loading, currentUserId, onViewProof }) {
   const [pickerFor, setPickerFor] = useState(null);
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [submittingComment, setSubmittingComment] = useState(null);
 
-  const applyLocalReaction = (completionId, emoji) => {
+  const setReactionLocal = (completionId, fromEmoji, toEmoji) => {
     setAnalytics(prev => {
       if (!prev) return prev;
       return {
         ...prev,
         activityFeed: prev.activityFeed.map(a => {
           if (a.completionId !== completionId) return a;
-          const my = new Set(a.myReactions || []);
           const counts = { ...(a.reactions || {}) };
-          if (my.has(emoji)) {
-            my.delete(emoji);
-            counts[emoji] = Math.max(0, (counts[emoji] || 1) - 1);
-            if (counts[emoji] === 0) delete counts[emoji];
-          } else {
-            my.add(emoji);
-            counts[emoji] = (counts[emoji] || 0) + 1;
+          if (fromEmoji) {
+            counts[fromEmoji] = Math.max(0, (counts[fromEmoji] || 1) - 1);
+            if (counts[fromEmoji] === 0) delete counts[fromEmoji];
           }
-          return { ...a, reactions: counts, myReactions: Array.from(my) };
+          if (toEmoji) counts[toEmoji] = (counts[toEmoji] || 0) + 1;
+          return { ...a, reactions: counts, myEmoji: toEmoji };
         })
       };
     });
   };
 
-  const toggleReaction = async (completionId, emoji) => {
-    applyLocalReaction(completionId, emoji);
+  const handleReaction = async (a, emoji) => {
+    const previous = a.myEmoji;
+    const next = previous === emoji ? null : emoji; // toggle off if same
+    setReactionLocal(a.completionId, previous, next);
     setPickerFor(null);
-    try { await api.toggleReaction(completionId, emoji); }
-    catch { applyLocalReaction(completionId, emoji); }
+    try { await api.toggleReaction(a.completionId, emoji); }
+    catch { setReactionLocal(a.completionId, next, previous); }
+  };
+
+  const handleAddComment = async (completionId) => {
+    const body = (commentDrafts[completionId] || '').trim();
+    if (!body) return;
+    setSubmittingComment(completionId);
+    try {
+      const { comment } = await api.addComment(completionId, body);
+      setAnalytics(prev => prev ? {
+        ...prev,
+        activityFeed: prev.activityFeed.map(a => a.completionId === completionId
+          ? { ...a, comments: [...(a.comments || []), {
+              id: comment.id, body: comment.body, createdAt: comment.createdAt,
+              userId: comment.userId, userName: comment.user?.name || 'You', userAvatar: comment.user?.avatar || null
+            }] }
+          : a)
+      } : prev);
+      setCommentDrafts(prev => ({ ...prev, [completionId]: '' }));
+    } catch (err) {
+      alert(err.message || 'Could not post comment');
+    } finally {
+      setSubmittingComment(null);
+    }
+  };
+
+  const handleDeleteComment = async (completionId, commentId) => {
+    setAnalytics(prev => prev ? {
+      ...prev,
+      activityFeed: prev.activityFeed.map(a => a.completionId === completionId
+        ? { ...a, comments: (a.comments || []).filter(c => c.id !== commentId) }
+        : a)
+    } : prev);
+    try { await api.deleteComment(commentId); }
+    catch (err) { alert(err.message || 'Could not delete comment'); }
   };
 
   if (loading && !analytics) {
@@ -1070,12 +1150,13 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId }) {
       {activityFeed.length === 0 ? (
         <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet — be the first.</div>
       ) : (
-        <div className="rounded-2xl glass-card overflow-hidden">
+        <div className="space-y-3">
           {activityFeed.map((a) => {
             const activeReactions = Object.entries(a.reactions || {}).filter(([, n]) => n > 0);
             const isMine = a.userId === currentUserId;
+            const comments = a.comments || [];
             return (
-              <div key={a.completionId} className="p-3 border-b border-[var(--card-border)] last:border-0">
+              <div key={a.completionId} className="rounded-2xl glass-card p-3">
                 <div className="flex items-center gap-3">
                   {a.userAvatar ? (
                     <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
@@ -1091,17 +1172,22 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId }) {
                     <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                   </div>
                   {a.proofUrl && (
-                    <img src={a.proofUrl} alt="proof" className="w-10 h-10 rounded-md object-cover border border-green-500/30 shrink-0" />
+                    <button onClick={() => onViewProof?.({ title: a.taskTitle, url: a.proofUrl })}
+                      className="w-10 h-10 rounded-md overflow-hidden border border-green-500/30 hover:border-green-500/60 transition-colors shrink-0">
+                      <img src={a.proofUrl} alt="proof" className="w-full h-full object-cover" />
+                    </button>
                   )}
                   <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                 </div>
+
+                {/* Reactions row */}
                 <div className="flex items-center gap-1.5 mt-2 ml-12 flex-wrap">
                   {activeReactions.map(([emoji, count]) => {
-                    const mine = (a.myReactions || []).includes(emoji);
+                    const mine = a.myEmoji === emoji;
                     return (
                       <button key={emoji} type="button"
                         disabled={isMine}
-                        onClick={() => !isMine && toggleReaction(a.completionId, emoji)}
+                        onClick={() => !isMine && handleReaction(a, emoji)}
                         className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-colors',
                           mine ? 'bg-brand-500/15 border border-brand-500/40 text-brand-500' : 'bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)]',
                           isMine && 'cursor-default')}>
@@ -1113,26 +1199,70 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId }) {
                     <div className="relative">
                       <button type="button" onClick={() => setPickerFor(pickerFor === a.completionId ? null : a.completionId)}
                         className="px-2 py-0.5 rounded-full text-xs bg-[var(--card-bg-hover)] border border-[var(--card-border)] hover:bg-[var(--card-bg-solid)] text-muted">
-                        +
+                        {a.myEmoji ? 'Change' : '+'}
                       </button>
                       {pickerFor === a.completionId && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setPickerFor(null)} />
                           <div className="absolute left-0 top-7 z-20 flex items-center gap-1 p-1.5 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
-                            {REACTION_EMOJIS.map(e => {
-                              const mine = (a.myReactions || []).includes(e);
-                              return (
-                                <button key={e} type="button" onClick={() => toggleReaction(a.completionId, e)}
-                                  className={cn('w-9 h-9 rounded-lg text-lg transition-transform hover:scale-125', mine && 'bg-brand-500/15')}>
-                                  {e}
-                                </button>
-                              );
-                            })}
+                            {REACTION_EMOJIS.map(e => (
+                              <button key={e} type="button" onClick={() => handleReaction(a, e)}
+                                className={cn('w-9 h-9 rounded-lg text-lg transition-transform hover:scale-125', a.myEmoji === e && 'bg-brand-500/15')}>
+                                {e}
+                              </button>
+                            ))}
                           </div>
                         </>
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Comments */}
+                {comments.length > 0 && (
+                  <div className="mt-3 ml-12 space-y-2">
+                    {comments.map(c => {
+                      const ownComment = c.userId === currentUserId;
+                      return (
+                        <div key={c.id} className="flex items-start gap-2 group">
+                          {c.userAvatar ? (
+                            <img src={c.userAvatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{getInitials(c.userName)}</div>
+                          )}
+                          <div className="flex-1 min-w-0 px-3 py-1.5 rounded-2xl bg-[var(--card-bg-hover)]">
+                            <p className="text-[11px] font-semibold">{ownComment ? 'You' : c.userName}</p>
+                            <p className="text-sm text-primary break-words">{c.body}</p>
+                          </div>
+                          {ownComment && (
+                            <button onClick={() => handleDeleteComment(a.completionId, c.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted hover:text-red-400" title="Delete">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Comment input */}
+                <div className="mt-3 ml-12 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={commentDrafts[a.completionId] || ''}
+                    onChange={(e) => setCommentDrafts(prev => ({ ...prev, [a.completionId]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddComment(a.completionId); } }}
+                    placeholder="Write a comment..."
+                    maxLength={500}
+                    disabled={submittingComment === a.completionId}
+                    className="flex-1 px-3 py-1.5 rounded-full bg-[var(--card-bg-hover)] border border-[var(--card-border)] text-sm placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500"
+                  />
+                  <button onClick={() => handleAddComment(a.completionId)}
+                    disabled={!commentDrafts[a.completionId]?.trim() || submittingComment === a.completionId}
+                    className="px-3 py-1.5 rounded-full bg-brand-500 text-white text-xs font-semibold disabled:opacity-40">
+                    {submittingComment === a.completionId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Post'}
+                  </button>
                 </div>
               </div>
             );
