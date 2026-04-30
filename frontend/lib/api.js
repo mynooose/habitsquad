@@ -252,6 +252,12 @@ class ApiClient {
     return this.request(`/groups/${groupId}/analytics?days=${days}&date=${this.getLocalDateKey()}`);
   }
 
+  async getGroupActivity(groupId, before = null, limit = 20) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (before) params.set('before', new Date(before).toISOString());
+    return this.request(`/groups/${groupId}/activity?${params}`);
+  }
+
   async toggleReaction(completionId, emoji) {
     return this.request(`/completions/${completionId}/reactions`, { method: 'POST', body: { emoji } });
   }

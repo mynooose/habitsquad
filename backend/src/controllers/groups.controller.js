@@ -5,6 +5,7 @@ const { sendGroupInviteEmail, sendGroupAddedEmail } = require('../utils/mailer')
 const { getApplicableTasks, computeDayScore, getTodayRange } = require('../utils/helpers');
 const groupQ = require('../queries/groups.queries');
 const taskQ = require('../queries/tasks.queries');
+const activityLog = require('../utils/activityLog');
 
 async function listGroups(req, res, next) {
   try {
@@ -51,6 +52,7 @@ async function joinGroup(req, res, next) {
     if (existing) return res.status(400).json({ error: 'Already a member of this group' });
     await groupQ.createMembership(req.user.id, group.id);
     await groupQ.acceptInvites(group.id, req.user.email);
+    activityLog.log({ groupId: group.id, userId: req.user.id, type: 'MEMBER_JOINED' });
     res.json({ group, message: 'Successfully joined group' });
   } catch (error) { next(error); }
 }
@@ -181,6 +183,103 @@ async function getMemberTasks(req, res, next) {
     });
     memberTasks.sort((a, b) => b.score - a.score);
     res.json({ memberTasks });
+  } catch (error) { next(error); }
+}
+
+async function getActivityFeed(req, res, next) {
+  try {
+    const membership = await groupQ.findMembership(req.user.id, req.params.id);
+    if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
+
+    const limit = Math.min(50, Math.max(5, parseInt(req.query.limit) || 20));
+    const before = req.query.before ? new Date(req.query.before) : new Date();
+
+    const memberIds = (await groupQ.findGroupMembers(req.params.id)).map(m => m.userId);
+
+    // Pull both event types separately, then merge by createdAt desc.
+    const [completions, events] = await Promise.all([
+      prisma.taskCompletion.findMany({
+        where: {
+          userId: { in: memberIds },
+          task: { groupId: req.params.id },
+          createdAt: { lt: before }
+        },
+        include: {
+          task: { select: { id: true, title: true, color: true } },
+          reactions: { select: { emoji: true, userId: true } },
+          comments: {
+            include: { user: { select: { id: true, name: true, avatar: true } } },
+            orderBy: { createdAt: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }),
+      prisma.groupActivity.findMany({
+        where: { groupId: req.params.id, createdAt: { lt: before } },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+          targetUser: { select: { id: true, name: true, avatar: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    ]);
+
+    // Lookup map for completion users (since reactions/comments don't carry user info)
+    const memberMap = Object.fromEntries((await groupQ.findGroupMembers(req.params.id)).map(m => [m.userId, m.user]));
+
+    const completionItems = completions.map(c => {
+      const counts = {};
+      let myEmoji = null;
+      (c.reactions || []).forEach(r => {
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+        if (r.userId === req.user.id) myEmoji = r.emoji;
+      });
+      return {
+        id: 'c_' + c.id,
+        kind: 'COMPLETED',
+        createdAt: c.createdAt,
+        completionId: c.id,
+        userId: c.userId,
+        userName: memberMap[c.userId]?.name || 'Member',
+        userAvatar: memberMap[c.userId]?.avatar || null,
+        taskId: c.taskId,
+        taskTitle: c.task?.title || 'Task',
+        taskColor: c.task?.color || null,
+        proofUrl: c.proofUrl || null,
+        reactions: counts,
+        myEmoji,
+        comments: (c.comments || []).map(co => ({
+          id: co.id, body: co.body, createdAt: co.createdAt,
+          userId: co.userId, userName: co.user?.name || 'Member', userAvatar: co.user?.avatar || null
+        }))
+      };
+    });
+
+    const eventItems = events.map(e => ({
+      id: 'e_' + e.id,
+      kind: e.type,
+      createdAt: e.createdAt,
+      userId: e.userId,
+      userName: e.user?.name || 'Member',
+      userAvatar: e.user?.avatar || null,
+      targetUserId: e.targetUserId,
+      targetUserName: e.targetUser?.name || null,
+      habitTitle: e.habitTitle,
+      habitColor: e.habitColor,
+      detail: e.detail
+    }));
+
+    const merged = [...completionItems, ...eventItems]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit);
+
+    const oldestTs = merged.length > 0 ? merged[merged.length - 1].createdAt : null;
+    // hasMore: if either source returned `limit` items there may be more
+    const hasMore = completions.length === limit || events.length === limit;
+
+    res.json({ items: merged, hasMore, nextBefore: hasMore ? oldestTs : null });
   } catch (error) { next(error); }
 }
 
@@ -396,6 +495,7 @@ async function removeMember(req, res, next) {
     if (!membership || membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only admins can remove members' });
     if (req.params.userId === req.user.id) return res.status(400).json({ error: 'Cannot remove yourself. Use leave instead.' });
     await groupQ.deleteMembership(req.params.userId, req.params.id);
+    activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'MEMBER_KICKED', targetUserId: req.params.userId });
     res.json({ success: true });
   } catch (error) { next(error); }
 }
@@ -433,9 +533,11 @@ async function leaveGroup(req, res, next) {
           where: { userId_groupId: { userId: successorId, groupId: req.params.id } },
           data: { role: 'ADMIN' }
         });
+        activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'ADMIN_TRANSFERRED', targetUserId: successorId });
       }
     }
     await groupQ.deleteMembershipById(membership.id);
+    activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'MEMBER_LEFT' });
     res.json({ success: true });
   } catch (error) { next(error); }
 }
@@ -453,6 +555,7 @@ async function updateMemberRole(req, res, next) {
       where: { userId_groupId: { userId: req.params.userId, groupId: req.params.id } },
       data: { role }
     });
+    activityLog.log({ groupId: req.params.id, userId: req.user.id, type: role === 'ADMIN' ? 'MEMBER_PROMOTED' : 'MEMBER_DEMOTED', targetUserId: req.params.userId });
     res.json({ success: true });
   } catch (error) { next(error); }
 }
@@ -469,7 +572,29 @@ async function updateGroup(req, res, next) {
       return res.status(403).json({ error: 'Only admins can change the group name' });
     }
 
+    // Capture previous values to detect changes for the activity log.
+    const before = await prisma.group.findUnique({
+      where: { id: req.params.id },
+      select: { name: true, description: true, color: true, image: true }
+    });
+
     const group = await groupQ.updateGroup(req.params.id, data);
+
+    if (before) {
+      if (data.name !== undefined && data.name !== before.name) {
+        activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'GROUP_RENAMED', detail: `from "${before.name}" to "${data.name}"` });
+      }
+      if (data.description !== undefined && data.description !== before.description) {
+        activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'GROUP_DESC_CHANGED' });
+      }
+      if (data.color !== undefined && data.color !== before.color) {
+        activityLog.log({ groupId: req.params.id, userId: req.user.id, type: 'GROUP_COLOR_CHANGED' });
+      }
+      if (data.image !== undefined && data.image !== before.image) {
+        activityLog.log({ groupId: req.params.id, userId: req.user.id, type: data.image ? 'GROUP_PHOTO_CHANGED' : 'GROUP_PHOTO_REMOVED' });
+      }
+    }
+
     res.json({ group });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
@@ -477,4 +602,4 @@ async function updateGroup(req, res, next) {
   }
 }
 
-module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole, getAnalytics };
+module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole, getAnalytics, getActivityFeed };

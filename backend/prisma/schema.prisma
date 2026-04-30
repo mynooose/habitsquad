@@ -42,6 +42,8 @@ model User {
   notifications Notification[]
   reactions     Reaction[]
   comments      Comment[]
+  activitiesActed   GroupActivity[] @relation("ActivityActor")
+  activitiesTargeted GroupActivity[] @relation("ActivityTarget")
 
   @@map("users")
 }
@@ -135,6 +137,7 @@ model Group {
   memberships GroupMembership[]
   tasks       Task[]
   invites     GroupInvite[]
+  activities  GroupActivity[]
 
   @@map("groups")
 }
@@ -210,4 +213,29 @@ model Comment {
 
   @@index([completionId])
   @@map("comments")
+}
+
+model GroupActivity {
+  id        String   @id @default(cuid())
+  // Types: HABIT_ADDED, HABIT_DELETED, HABIT_EDITED,
+  //        MEMBER_JOINED, MEMBER_LEFT, MEMBER_KICKED,
+  //        MEMBER_PROMOTED, MEMBER_DEMOTED, ADMIN_TRANSFERRED,
+  //        GROUP_RENAMED, GROUP_PHOTO_CHANGED, GROUP_DESC_CHANGED, GROUP_COLOR_CHANGED
+  type      String
+  userId    String
+  user      User     @relation("ActivityActor", fields: [userId], references: [id], onDelete: Cascade)
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  targetUserId String?
+  targetUser   User?  @relation("ActivityTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  habitTitle String?
+  habitColor String?
+  detail     String?  @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([groupId, createdAt])
+  @@map("group_activities")
 }

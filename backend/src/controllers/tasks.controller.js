@@ -4,6 +4,7 @@ const { getTodayRange } = require('../utils/helpers');
 const taskQ = require('../queries/tasks.queries');
 const groupQ = require('../queries/groups.queries');
 const prisma = require('../database/prisma');
+const activityLog = require('../utils/activityLog');
 
 async function getBudget(req, res, next) {
   try {
@@ -79,6 +80,9 @@ async function createTask(req, res, next) {
         })
       ]).then(results => [results.slice(0, -1), results[results.length - 1]]);
 
+      if (newTask.groupId) {
+        activityLog.log({ groupId: newTask.groupId, userId: req.user.id, type: 'HABIT_ADDED', habitTitle: newTask.title, habitColor: newTask.color });
+      }
       return res.status(201).json({ task: newTask });
     }
 
@@ -91,6 +95,9 @@ async function createTask(req, res, next) {
     }
 
     const task = await taskQ.createTask({ ...data, userId: req.user.id });
+    if (task.groupId) {
+      activityLog.log({ groupId: task.groupId, userId: req.user.id, type: 'HABIT_ADDED', habitTitle: task.title, habitColor: task.color });
+    }
     res.status(201).json({ task });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
@@ -122,6 +129,17 @@ async function updateTask(req, res, next) {
     }
 
     const task = await taskQ.updateTask(req.params.id, data);
+
+    // Log meaningful edits if the task is in a group.
+    const editFields = ['title', 'frequency', 'weightage', 'color', 'requiresProof', 'deadlineTime', 'isActive'];
+    const changed = editFields.filter(k => data[k] !== undefined && data[k] !== existing[k]);
+    if (task.groupId && changed.length > 0) {
+      activityLog.log({
+        groupId: task.groupId, userId: req.user.id, type: 'HABIT_EDITED',
+        habitTitle: task.title, habitColor: task.color,
+        detail: `changed ${changed.join(', ')}`
+      });
+    }
     res.json({ task });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
@@ -141,6 +159,9 @@ async function deleteTask(req, res, next) {
     if (siblings.length === 0) {
       // No remaining tasks to redistribute — just delete.
       await taskQ.deleteTask(req.params.id);
+      if (existing.groupId) {
+        activityLog.log({ groupId: existing.groupId, userId: req.user.id, type: 'HABIT_DELETED', habitTitle: existing.title, habitColor: existing.color });
+      }
       return res.json({ success: true });
     }
 
@@ -154,6 +175,9 @@ async function deleteTask(req, res, next) {
       prisma.task.delete({ where: { id: req.params.id } })
     ]);
 
+    if (existing.groupId) {
+      activityLog.log({ groupId: existing.groupId, userId: req.user.id, type: 'HABIT_DELETED', habitTitle: existing.title, habitColor: existing.color });
+    }
     res.json({ success: true });
   } catch (error) {
     next(error);

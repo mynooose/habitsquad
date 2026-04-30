@@ -76,7 +76,7 @@ export default function GroupDetailPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    if ((tab !== 'analytics' && tab !== 'activity') || !groupId) return;
+    if (tab !== 'analytics' || !groupId) return;
     let cancelled = false;
     setAnalyticsLoading(true);
     api.getGroupAnalytics(groupId, 30).then(res => { if (!cancelled) setAnalytics(res); })
@@ -90,12 +90,51 @@ export default function GroupDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!group?.inviteCode || typeof window === 'undefined') return;
     const link = `${window.location.origin}/join?code=${group.inviteCode}`;
-    navigator.clipboard.writeText(link);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    const shareText = `Join my "${group.name}" group on HabitSquad: ${link}`;
+
+    // Prefer the native share sheet on mobile (works on http) — opens
+    // WhatsApp/SMS/etc. and is what users actually want.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join "${group.name}" on HabitSquad`, text: shareText, url: link });
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return; // user cancelled the sheet
+        // fall through to clipboard
+      }
+    }
+
+    // Try modern Clipboard API (HTTPS only)
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(link);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+        return;
+      }
+    } catch {}
+
+    // Fallback for plain HTTP / older browsers — use a hidden textarea + execCommand
+    const ta = document.createElement('textarea');
+    ta.value = link;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    if (copied) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } else {
+      // Last resort: show the link so the user can long-press and copy manually
+      window.prompt('Copy this invite link:', link);
+    }
   };
 
   const handleCopyHabit = async (task) => {
@@ -201,9 +240,16 @@ export default function GroupDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/dashboard/groups" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 overflow-hidden" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
-          {group.image ? <img src={group.image} alt="" className="w-full h-full object-cover" /> : group.name.charAt(0)}
-        </div>
+        {group.image ? (
+          <button onClick={() => setViewProof({ title: group.name, url: group.image })}
+            className="w-12 h-12 rounded-xl shrink-0 overflow-hidden hover:ring-2 hover:ring-brand-500/40 transition-all">
+            <img src={group.image} alt={group.name} className="w-full h-full object-cover" />
+          </button>
+        ) : (
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: (group.color || '#8b5cf6') + '20' }}>
+            {group.name.charAt(0)}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold truncate">{group.name}</h1>
@@ -422,9 +468,7 @@ export default function GroupDetailPage() {
       {/* Activity Tab */}
       {tab === 'activity' && (
         <ActivityTab
-          analytics={analytics}
-          setAnalytics={setAnalytics}
-          loading={analyticsLoading}
+          groupId={groupId}
           currentUserId={user?.id}
           onViewProof={setViewProof}
         />
@@ -1071,28 +1115,53 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
   );
 }
 
-function ActivityTab({ analytics, setAnalytics, loading, currentUserId, onViewProof }) {
+function ActivityTab({ groupId, currentUserId, onViewProof }) {
+  const [items, setItems] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextBefore, setNextBefore] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pickerFor, setPickerFor] = useState(null);
   const [commentDrafts, setCommentDrafts] = useState({});
   const [submittingComment, setSubmittingComment] = useState(null);
 
+  // Initial load
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.getGroupActivity(groupId, null, 20).then(res => {
+      if (cancelled) return;
+      setItems(res.items || []);
+      setHasMore(!!res.hasMore);
+      setNextBefore(res.nextBefore);
+    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [groupId]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore || !nextBefore) return;
+    setLoadingMore(true);
+    try {
+      const res = await api.getGroupActivity(groupId, nextBefore, 20);
+      setItems(prev => [...prev, ...(res.items || [])]);
+      setHasMore(!!res.hasMore);
+      setNextBefore(res.nextBefore);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const setReactionLocal = (completionId, fromEmoji, toEmoji) => {
-    setAnalytics(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        activityFeed: prev.activityFeed.map(a => {
-          if (a.completionId !== completionId) return a;
-          const counts = { ...(a.reactions || {}) };
-          if (fromEmoji) {
-            counts[fromEmoji] = Math.max(0, (counts[fromEmoji] || 1) - 1);
-            if (counts[fromEmoji] === 0) delete counts[fromEmoji];
-          }
-          if (toEmoji) counts[toEmoji] = (counts[toEmoji] || 0) + 1;
-          return { ...a, reactions: counts, myEmoji: toEmoji };
-        })
-      };
-    });
+    setItems(prev => prev.map(a => {
+      if (a.completionId !== completionId) return a;
+      const counts = { ...(a.reactions || {}) };
+      if (fromEmoji) {
+        counts[fromEmoji] = Math.max(0, (counts[fromEmoji] || 1) - 1);
+        if (counts[fromEmoji] === 0) delete counts[fromEmoji];
+      }
+      if (toEmoji) counts[toEmoji] = (counts[toEmoji] || 0) + 1;
+      return { ...a, reactions: counts, myEmoji: toEmoji };
+    }));
   };
 
   const handleReaction = async (a, emoji) => {
@@ -1110,15 +1179,12 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId, onViewPr
     setSubmittingComment(completionId);
     try {
       const { comment } = await api.addComment(completionId, body);
-      setAnalytics(prev => prev ? {
-        ...prev,
-        activityFeed: prev.activityFeed.map(a => a.completionId === completionId
-          ? { ...a, comments: [...(a.comments || []), {
-              id: comment.id, body: comment.body, createdAt: comment.createdAt,
-              userId: comment.userId, userName: comment.user?.name || 'You', userAvatar: comment.user?.avatar || null
-            }] }
-          : a)
-      } : prev);
+      setItems(prev => prev.map(a => a.completionId === completionId
+        ? { ...a, comments: [...(a.comments || []), {
+            id: comment.id, body: comment.body, createdAt: comment.createdAt,
+            userId: comment.userId, userName: comment.user?.name || 'You', userAvatar: comment.user?.avatar || null
+          }] }
+        : a));
       setCommentDrafts(prev => ({ ...prev, [completionId]: '' }));
     } catch (err) {
       alert(err.message || 'Could not post comment');
@@ -1128,35 +1194,31 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId, onViewPr
   };
 
   const handleDeleteComment = async (completionId, commentId) => {
-    setAnalytics(prev => prev ? {
-      ...prev,
-      activityFeed: prev.activityFeed.map(a => a.completionId === completionId
-        ? { ...a, comments: (a.comments || []).filter(c => c.id !== commentId) }
-        : a)
-    } : prev);
+    setItems(prev => prev.map(a => a.completionId === completionId
+      ? { ...a, comments: (a.comments || []).filter(c => c.id !== commentId) }
+      : a));
     try { await api.deleteComment(commentId); }
     catch (err) { alert(err.message || 'Could not delete comment'); }
   };
 
-  if (loading && !analytics) {
+  if (loading) {
     return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
   }
-  if (!analytics) return null;
 
-  const { activityFeed } = analytics;
   return (
     <section>
       <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Activity className="w-5 h-5 text-brand-500" /> Recent Activity</h2>
-      {activityFeed.length === 0 ? (
-        <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No completions yet — be the first.</div>
+      {items.length === 0 ? (
+        <div className="p-6 rounded-2xl glass-card text-center text-sm text-muted">No activity yet — be the first to do something.</div>
       ) : (
         <div className="space-y-3">
-          {activityFeed.map((a) => {
+          {items.map((a) => {
+            if (a.kind !== 'COMPLETED') return <EventRow key={a.id} a={a} currentUserId={currentUserId} />;
             const activeReactions = Object.entries(a.reactions || {}).filter(([, n]) => n > 0);
             const isMine = a.userId === currentUserId;
             const comments = a.comments || [];
             return (
-              <div key={a.completionId} className="rounded-2xl glass-card p-3">
+              <div key={a.id} className="rounded-2xl glass-card p-3">
                 <div className="flex items-center gap-3">
                   {a.userAvatar ? (
                     <img src={a.userAvatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
@@ -1267,9 +1329,69 @@ function ActivityTab({ analytics, setAnalytics, loading, currentUserId, onViewPr
               </div>
             );
           })}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <button onClick={loadMore} disabled={loadingMore}
+                className="px-5 py-2.5 rounded-full bg-[var(--card-bg)] hover:bg-[var(--card-bg-hover)] border border-[var(--card-border)] text-sm font-semibold disabled:opacity-50 flex items-center gap-2">
+                {loadingMore ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</> : 'Load older'}
+              </button>
+            </div>
+          )}
+          {!hasMore && items.length >= 20 && (
+            <p className="text-center text-xs text-muted py-2 italic">You've reached the start.</p>
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+const EVENT_VERB = {
+  HABIT_ADDED: 'added a habit',
+  HABIT_DELETED: 'deleted a habit',
+  HABIT_EDITED: 'edited a habit',
+  MEMBER_JOINED: 'joined the group',
+  MEMBER_LEFT: 'left the group',
+  MEMBER_KICKED: 'removed',
+  MEMBER_PROMOTED: 'promoted',
+  MEMBER_DEMOTED: 'demoted',
+  ADMIN_TRANSFERRED: 'transferred admin to',
+  GROUP_RENAMED: 'renamed the group',
+  GROUP_PHOTO_CHANGED: 'changed the group photo',
+  GROUP_PHOTO_REMOVED: 'removed the group photo',
+  GROUP_DESC_CHANGED: 'updated the description',
+  GROUP_COLOR_CHANGED: 'changed the group color'
+};
+
+function EventRow({ a, currentUserId }) {
+  const isMine = a.userId === currentUserId;
+  const verb = EVENT_VERB[a.kind] || 'did something';
+  const targets = ['MEMBER_KICKED', 'MEMBER_PROMOTED', 'MEMBER_DEMOTED', 'ADMIN_TRANSFERRED'].includes(a.kind);
+  const isHabit = ['HABIT_ADDED', 'HABIT_DELETED', 'HABIT_EDITED'].includes(a.kind);
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-2xl bg-[var(--card-bg)]/50 border border-[var(--card-border)]/50">
+      {a.userAvatar ? (
+        <img src={a.userAvatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-[var(--card-bg-hover)] flex items-center justify-center text-[10px] font-bold shrink-0">{getInitials(a.userName)}</div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm">
+          <span className="font-semibold">{isMine ? 'You' : a.userName}</span>
+          {' '}<span className="text-muted">{verb}</span>
+          {targets && a.targetUserName && (<>{' '}<span className="font-medium">{a.targetUserId === currentUserId ? 'you' : a.targetUserName}</span></>)}
+          {isHabit && a.habitTitle && (<>{' '}<span className="font-medium">"{a.habitTitle}"</span></>)}
+        </p>
+        <p className="text-xs text-muted">
+          {new Date(a.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+          {a.detail && <span> · {a.detail}</span>}
+        </p>
+      </div>
+      {isHabit && a.habitColor && (
+        <span className="w-1 h-7 rounded-full shrink-0" style={{ backgroundColor: a.habitColor }} />
+      )}
+    </div>
   );
 }
 

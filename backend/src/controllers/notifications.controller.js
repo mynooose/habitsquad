@@ -1,4 +1,5 @@
 const prisma = require('../database/prisma');
+const activityLog = require('../utils/activityLog');
 
 async function listNotifications(req, res, next) {
   try {
@@ -63,6 +64,7 @@ async function respondToNotification(req, res, next) {
           await prisma.groupMembership.create({
             data: { userId: req.user.id, groupId: notif.relatedId, role: 'MEMBER' }
           });
+          activityLog.log({ groupId: notif.relatedId, userId: req.user.id, type: 'MEMBER_JOINED' });
         }
       }
       if (action === 'decline') {
