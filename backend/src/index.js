@@ -11,7 +11,9 @@ const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const notificationRoutes = require('./routes/notifications');
 const reactionRoutes = require('./routes/reactions');
+const reflectionRoutes = require('./routes/reflections');
 const { startDailyEmailCron } = require('./utils/dailyEmail');
+const { startCriticalCheckCron } = require('./utils/criticalCheck');
 
 const app = express();
 
@@ -53,6 +55,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api', reactionRoutes);
+app.use('/api/reflections', reflectionRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {
@@ -72,4 +75,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 HabitSquad API running on http://localhost:${PORT}`);
   startDailyEmailCron();
+  startCriticalCheckCron();
 });

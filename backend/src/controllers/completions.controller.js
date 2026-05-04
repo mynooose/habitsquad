@@ -1,4 +1,5 @@
 const compQ = require('../queries/completions.queries');
+const prisma = require('../database/prisma');
 const { getApplicableTasks, computeDayScore } = require('../utils/helpers');
 
 async function listCompletions(req, res, next) {
@@ -72,19 +73,24 @@ async function getCalendar(req, res, next) {
       const dayCompletions = completionsByDate[dateKey] || [];
       const totalWeight = applicableTasks.reduce((sum, t) => sum + t.weightage, 0);
       const completedWeight = dayCompletions.reduce((sum, c) => sum + (c.task?.weightage || 0), 0);
-      const completedTaskIds = new Set(dayCompletions.map(c => c.taskId));
+      const completionByTaskId = Object.fromEntries(dayCompletions.map(c => [c.taskId, c]));
 
       calendarData[dateKey] = {
         date: dateKey,
         completions: dayCompletions.length,
         totalTasks: applicableTasks.length,
         score: totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0,
-        tasks: applicableTasks.map(t => ({
-          id: t.id, title: t.title, color: t.color, weightage: t.weightage, frequency: t.frequency,
-          requiresProof: t.requiresProof, deadlineTime: t.deadlineTime,
-          groupId: t.groupId, groupName: t.group?.name || null, groupColor: t.group?.color || null,
-          completed: completedTaskIds.has(t.id)
-        }))
+        tasks: applicableTasks.map(t => {
+          const c = completionByTaskId[t.id];
+          return {
+            id: t.id, title: t.title, color: t.color, weightage: t.weightage, frequency: t.frequency,
+            requiresProof: t.requiresProof, deadlineTime: t.deadlineTime,
+            groupId: t.groupId, groupName: t.group?.name || null, groupColor: t.group?.color || null,
+            completed: !!c,
+            completionId: c?.id || null,
+            remark: c?.notes || null
+          };
+        })
       };
     }
 
@@ -94,4 +100,24 @@ async function getCalendar(req, res, next) {
   }
 }
 
-module.exports = { listCompletions, getCalendar };
+async function updateRemark(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { remark } = req.body || {};
+    const trimmed = (remark ?? '').toString().slice(0, 500);
+
+    const completion = await prisma.taskCompletion.findUnique({ where: { id }, select: { userId: true } });
+    if (!completion) return res.status(404).json({ error: 'Completion not found' });
+    if (completion.userId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+    const updated = await prisma.taskCompletion.update({
+      where: { id },
+      data: { notes: trimmed.trim() ? trimmed : null }
+    });
+    res.json({ completion: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { listCompletions, getCalendar, updateRemark };

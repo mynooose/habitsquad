@@ -57,6 +57,10 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('');
   const [dailyEmail, setDailyEmail] = useState(false);
   const [dailyEmailTime, setDailyEmailTime] = useState('07:00');
+  const [weeklyReview, setWeeklyReview] = useState(false);
+  const [weeklyReviewHour, setWeeklyReviewHour] = useState('21:00');
+  const [monthlySummary, setMonthlySummary] = useState(false);
+  const [shameEmail, setShameEmail] = useState(false);
   const [timezone, setTimezone] = useState('UTC');
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -77,6 +81,10 @@ export default function ProfilePage() {
         bio: u.bio || '',
         dailyEmail: u.dailyEmailEnabled || false,
         dailyEmailTime: u.dailyEmailTime || '07:00',
+        weeklyReview: u.weeklyReviewEnabled || false,
+        weeklyReviewHour: u.weeklyReviewHour || '21:00',
+        monthlySummary: u.monthlySummaryEnabled || false,
+        shameEmail: u.shameEmailEnabled || false,
         timezone: u.timezone || browserTz,
       };
       setName(data.name);
@@ -86,6 +94,10 @@ export default function ProfilePage() {
       setBio(data.bio);
       setDailyEmail(data.dailyEmail);
       setDailyEmailTime(data.dailyEmailTime);
+      setWeeklyReview(data.weeklyReview);
+      setWeeklyReviewHour(data.weeklyReviewHour);
+      setMonthlySummary(data.monthlySummary);
+      setShameEmail(data.shameEmail);
       setTimezone(data.timezone);
       setOriginalData(data);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -100,6 +112,9 @@ export default function ProfilePage() {
       setBio(originalData.bio);
       setDailyEmail(originalData.dailyEmail);
       setDailyEmailTime(originalData.dailyEmailTime);
+      setWeeklyReview(originalData.weeklyReview);
+      setWeeklyReviewHour(originalData.weeklyReviewHour);
+      setMonthlySummary(originalData.monthlySummary);
       setTimezone(originalData.timezone);
     }
     setIsEditing(false);
@@ -120,12 +135,10 @@ export default function ProfilePage() {
         dob: dob || null,
         gender: gender || null,
         bio: bio.trim() || null,
-        dailyEmailEnabled: dailyEmail,
-        dailyEmailTime,
         timezone,
       });
       await checkAuth();
-      setOriginalData({ name: name.trim(), avatar, dob, gender, bio: bio.trim(), dailyEmail, dailyEmailTime, timezone });
+      setOriginalData(prev => ({ ...prev, name: name.trim(), avatar, dob, gender, bio: bio.trim(), timezone }));
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -134,6 +147,32 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Inline auto-save — every field saves immediately on change/blur.
+  const [prefSaving, setPrefSaving] = useState(false);
+  const autoSavePref = async (apiPatch, localStateUpdates, originalDataPatch) => {
+    if (localStateUpdates) localStateUpdates();
+    setPrefSaving(true);
+    setError('');
+    try {
+      await api.updateProfile(apiPatch);
+      setOriginalData(prev => prev ? { ...prev, ...originalDataPatch } : prev);
+      if (typeof checkAuth === 'function') checkAuth();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (err) {
+      setError(err.message || 'Failed to save');
+    } finally {
+      setPrefSaving(false);
+    }
+  };
+
+  // Save a single field on blur if it changed.
+  const saveOnBlur = (field, value, normalize = (v) => v) => {
+    const norm = normalize(value);
+    if (originalData && originalData[field] === norm) return;
+    autoSavePref({ [field]: norm }, null, { [field]: norm });
   };
 
   const handleDelete = async () => {
@@ -159,16 +198,16 @@ export default function ProfilePage() {
         <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-muted text-sm">Manage your account details</p>
+          <p className="text-muted text-sm">Changes save automatically</p>
         </div>
-        {!isEditing && (
-          <button onClick={() => setIsEditing(true)} className="btn-primary px-4 py-2 text-sm font-semibold flex items-center gap-2">
-            <Edit2 className="w-4 h-4" /> Edit Profile
-          </button>
+        {prefSaving && (
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> saving
+          </div>
         )}
-        {saved && !isEditing && (
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-green-500/15 text-green-500 text-sm font-medium">
-            <Check className="w-4 h-4" /> Saved
+        {saved && !prefSaving && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/15 text-green-500 text-xs font-medium">
+            <Check className="w-3.5 h-3.5" /> Saved
           </div>
         )}
       </div>
@@ -185,12 +224,11 @@ export default function ProfilePage() {
               {name?.charAt(0)?.toUpperCase() || '?'}
             </div>
           )}
-          {isEditing && (
-            <button onClick={() => setShowAvatars(!showAvatars)}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center hover:bg-brand-600 transition-colors shadow-lg">
-              <Camera className="w-4 h-4 text-white" />
-            </button>
-          )}
+          <button onClick={() => setShowAvatars(!showAvatars)}
+            title="Change photo"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center hover:bg-brand-600 transition-colors shadow-lg">
+            <Camera className="w-4 h-4 text-white" />
+          </button>
         </div>
         <p className="text-lg font-semibold">{name}</p>
         <p className="text-sm text-muted">{user?.email}</p>
@@ -284,7 +322,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Avatar picker */}
-      {showAvatars && isEditing && (
+      {showAvatars && (
         <div className="mb-6 p-4 rounded-xl glass-card">
           <p className="text-sm font-medium mb-3">Choose an avatar</p>
 
@@ -308,13 +346,19 @@ export default function ProfilePage() {
           <p className="text-xs text-muted mb-2">Or pick a preset</p>
           <div className="grid grid-cols-6 gap-3">
             {AVATARS.map((url, i) => (
-              <button key={i} onClick={() => { setAvatar(url); setShowAvatars(false); }}
+              <button key={i} onClick={() => {
+                setShowAvatars(false);
+                if (avatar !== url) autoSavePref({ avatar: url }, () => setAvatar(url), { avatar: url });
+              }}
                 className={cn('w-full aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-105',
                   avatar === url ? 'border-brand-500' : 'border-transparent')}>
                 <img src={url} alt={`Avatar ${i + 1}`} className="w-full h-full bg-[var(--card-bg-hover)]" />
               </button>
             ))}
-            <button onClick={() => { setAvatar(''); setShowAvatars(false); }}
+            <button onClick={() => {
+              setShowAvatars(false);
+              if (avatar) autoSavePref({ avatar: null }, () => setAvatar(''), { avatar: '' });
+            }}
               className={cn('w-full aspect-square rounded-xl border-2 flex items-center justify-center bg-[var(--card-bg-hover)] text-muted hover:scale-105 transition-all',
                 !avatar ? 'border-brand-500' : 'border-transparent')}>
               <User className="w-6 h-6" />
@@ -323,16 +367,17 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Form - read-only or editable */}
+      {/* Form — every field auto-saves on blur/change */}
       <div className="space-y-5">
         <div>
           <label className="block text-sm font-medium mb-2 text-muted">Full Name</label>
-          {isEditing ? (
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
-          ) : (
-            <div className="px-4 py-3 rounded-xl glass-card">{name || <span className="text-muted">—</span>}</div>
-          )}
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
+            onBlur={() => {
+              const trimmed = name.trim();
+              if (!trimmed) { setName(originalData?.name || ''); return; }
+              saveOnBlur('name', trimmed);
+            }}
+            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] focus:outline-none focus:border-brand-500" />
         </div>
 
         <div>
@@ -341,89 +386,158 @@ export default function ProfilePage() {
             <Mail className="w-4 h-4" />
             {user?.email}
           </div>
-          {isEditing && <p className="text-xs text-muted mt-1">Email cannot be changed</p>}
+          <p className="text-xs text-muted mt-1">Email cannot be changed</p>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2 text-muted">Date of Birth</label>
-          {isEditing ? (
-            <DatePicker value={dob} onChange={setDob} />
-          ) : (
-            <div className="px-4 py-3 rounded-xl glass-card">{dob ? new Date(dob + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : <span className="text-muted">Not set</span>}</div>
-          )}
+          <DatePicker value={dob} onChange={(v) => {
+            setDob(v);
+            if (originalData && originalData.dob !== v) autoSavePref({ dob: v || null }, null, { dob: v });
+          }} />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2 text-muted">Gender</label>
-          {isEditing ? (
-            <div className="flex flex-wrap gap-2">
-              {GENDERS.map(g => (
-                <button key={g} type="button" onClick={() => setGender(gender === g ? '' : g)}
-                  className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                    gender === g ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
-                  {g}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-3 rounded-xl glass-card">{gender || <span className="text-muted">Not set</span>}</div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {GENDERS.map(g => (
+              <button key={g} type="button" onClick={() => {
+                const next = gender === g ? '' : g;
+                setGender(next);
+                if (originalData && originalData.gender !== next) autoSavePref({ gender: next || null }, null, { gender: next });
+              }}
+                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                  gender === g ? 'bg-brand-500 text-white' : 'bg-[var(--card-bg)] text-muted hover:text-primary')}>
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2 text-muted">Bio</label>
-          {isEditing ? (
-            <>
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={3} maxLength={200}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 resize-none" />
-              <p className="text-xs text-muted mt-1">{bio.length}/200</p>
-            </>
-          ) : (
-            <div className="px-4 py-3 rounded-xl glass-card min-h-[56px]">{bio || <span className="text-muted">No bio yet</span>}</div>
-          )}
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={3} maxLength={200}
+            onBlur={() => saveOnBlur('bio', bio, v => v.trim())}
+            className="w-full px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--input-border)] placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 resize-none" />
+          <p className="text-xs text-muted mt-1">{bio.length}/200</p>
         </div>
 
-        {/* Daily Email Notification */}
-        <div className="p-4 rounded-xl glass-card space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium flex items-center gap-2">
-                <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
-              </p>
-              <p className="text-sm text-muted">Get your planned tasks emailed each morning</p>
-            </div>
-            <button type="button" disabled={!isEditing} onClick={() => setDailyEmail(!dailyEmail)}
-              className={cn('w-12 h-7 rounded-full transition-colors relative disabled:opacity-60', dailyEmail ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10')}>
-              <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
-            </button>
+        {/* Notifications & Reports — always editable, auto-saved on change */}
+        <div className="pt-4 mt-2 border-t border-[var(--card-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Notifications & reports</h2>
+            {prefSaving && <span className="text-[11px] text-muted flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> saving</span>}
           </div>
-          {dailyEmail && (
-            <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
-              <Clock className="w-4 h-4 text-muted shrink-0" />
-              <span className="text-sm text-muted">Send at</span>
-              {isEditing ? (
-                <>
-                  <HourPicker value={dailyEmailTime} onChange={setDailyEmailTime} />
+          <div className="space-y-3">
+            {/* Daily Email Notification */}
+            <div className="p-4 rounded-xl glass-card space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-brand-400" /> Daily Email Reminder
+                  </p>
+                  <p className="text-sm text-muted">Get your planned tasks emailed each morning</p>
+                </div>
+                <button type="button"
+                  onClick={() => autoSavePref(
+                    { dailyEmailEnabled: !dailyEmail },
+                    () => setDailyEmail(!dailyEmail),
+                    { dailyEmail: !dailyEmail }
+                  )}
+                  className={cn('w-12 h-7 rounded-full transition-colors relative', dailyEmail ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10')}>
+                  <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', dailyEmail ? 'translate-x-6' : 'translate-x-1')} />
+                </button>
+              </div>
+              {dailyEmail && (
+                <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
+                  <Clock className="w-4 h-4 text-muted shrink-0" />
+                  <span className="text-sm text-muted">Send at</span>
+                  <HourPicker value={dailyEmailTime} onChange={(v) => autoSavePref(
+                    { dailyEmailTime: v },
+                    () => setDailyEmailTime(v),
+                    { dailyEmailTime: v }
+                  )} />
                   <span className="text-xs text-muted">in {timezone}</span>
-                </>
-              ) : (
-                <span className="text-sm font-medium">{dailyEmailTime} <span className="text-muted font-normal">({timezone})</span></span>
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {isEditing && (
-          <div className="flex gap-3 pt-4">
-            <button onClick={cancelEdit} className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-primary font-medium hover:bg-[var(--card-bg-hover)] flex items-center justify-center gap-2">
-              <X className="w-4 h-4" /> Cancel
-            </button>
-            <button onClick={handleSave} disabled={saving || !name.trim()}
-              className="flex-1 py-3 rounded-xl btn-primary font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-4 h-4" /> Save Changes</>}
-            </button>
+            {/* Sunday Weekly Review */}
+            <div className="p-4 rounded-xl glass-card space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" /> Sunday Weekly Review
+                  </p>
+                  <p className="text-sm text-muted">A summary of your week — numbers, daily breakdown, your reflections.</p>
+                </div>
+                <button type="button"
+                  onClick={() => autoSavePref(
+                    { weeklyReviewEnabled: !weeklyReview },
+                    () => setWeeklyReview(!weeklyReview),
+                    { weeklyReview: !weeklyReview }
+                  )}
+                  className={cn('w-12 h-7 rounded-full transition-colors relative', weeklyReview ? 'bg-purple-500' : 'bg-gray-300 dark:bg-white/10')}>
+                  <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', weeklyReview ? 'translate-x-6' : 'translate-x-1')} />
+                </button>
+              </div>
+              {weeklyReview && (
+                <div className="flex items-center gap-3 pt-2 border-t border-[var(--card-border)]">
+                  <Clock className="w-4 h-4 text-muted shrink-0" />
+                  <span className="text-sm text-muted">Sunday at</span>
+                  <HourPicker value={weeklyReviewHour} onChange={(v) => autoSavePref(
+                    { weeklyReviewHour: v },
+                    () => setWeeklyReviewHour(v),
+                    { weeklyReviewHour: v }
+                  )} />
+                  <span className="text-xs text-muted">in {timezone}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Monthly summary */}
+            <div className="p-4 rounded-xl glass-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-amber-400" /> Monthly summary
+                  </p>
+                  <p className="text-sm text-muted">First of each month — last 30 days as a PDF.</p>
+                </div>
+                <button type="button"
+                  onClick={() => autoSavePref(
+                    { monthlySummaryEnabled: !monthlySummary },
+                    () => setMonthlySummary(!monthlySummary),
+                    { monthlySummary: !monthlySummary }
+                  )}
+                  className={cn('w-12 h-7 rounded-full transition-colors relative', monthlySummary ? 'bg-amber-500' : 'bg-gray-300 dark:bg-white/10')}>
+                  <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', monthlySummary ? 'translate-x-6' : 'translate-x-1')} />
+                </button>
+              </div>
+            </div>
+
+            {/* Shame email */}
+            <div className="p-4 rounded-xl glass-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-red-500" /> Shame email
+                  </p>
+                  <p className="text-sm text-muted">Get an email when you land on the Wall of Shame. Off by default.</p>
+                </div>
+                <button type="button"
+                  onClick={() => autoSavePref(
+                    { shameEmailEnabled: !shameEmail },
+                    () => setShameEmail(!shameEmail),
+                    { shameEmail: !shameEmail }
+                  )}
+                  className={cn('w-12 h-7 rounded-full transition-colors relative', shameEmail ? 'bg-red-500' : 'bg-gray-300 dark:bg-white/10')}>
+                  <div className={cn('w-5 h-5 rounded-full bg-white absolute top-1 transition-transform', shameEmail ? 'translate-x-6' : 'translate-x-1')} />
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Danger zone */}
         <div className="mt-8 pt-6 border-t border-[var(--card-border)]">
@@ -455,9 +569,9 @@ export default function ProfilePage() {
           onConfirm={async (dataUrl) => {
             try {
               const { url } = await api.uploadImage(dataUrl, 'avatars');
-              setAvatar(url);
               setShowAvatars(false);
               setCropSrc(null);
+              autoSavePref({ avatar: url }, () => setAvatar(url), { avatar: url });
             } catch (err) {
               setError(err.message || 'Upload failed');
               setCropSrc(null);

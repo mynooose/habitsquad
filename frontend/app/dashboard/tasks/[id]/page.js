@@ -163,6 +163,7 @@ export default function EditTaskPage() {
           </button>
         </div>
 
+
         <div className="p-4 rounded-xl glass-card space-y-3">
           <div className="flex items-center justify-between">
             <div>

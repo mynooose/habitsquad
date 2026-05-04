@@ -53,20 +53,23 @@ export default function GroupDetailPage() {
   const [expandedAnalyticsMember, setExpandedAnalyticsMember] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const [completing, setCompleting] = useState(null);
+  const [shameUserIds, setShameUserIds] = useState(new Set());
 
   const fetchData = useCallback(async () => {
     try {
-      const [groupRes, leaderboardRes, tasksRes, memberTasksRes] = await Promise.all([
+      const [groupRes, leaderboardRes, tasksRes, memberTasksRes, shameRes] = await Promise.all([
         api.getGroup(groupId),
         api.getLeaderboard(groupId, period),
         api.getTasks({ groupId }),
         api.getMemberTasks(groupId),
+        api.getShameWall(groupId).catch(() => ({ items: [] })),
       ]);
       setGroup(groupRes.group);
       setRole(groupRes.role);
       setLeaderboard(leaderboardRes.leaderboard || []);
       setTasks(tasksRes.tasks || []);
       setMemberTasks(memberTasksRes.memberTasks || []);
+      setShameUserIds(new Set((shameRes.items || []).map(i => i.userId)));
     } catch (error) {
       console.error('Failed:', error);
       if (error.status === 403 || error.status === 404) router.push('/dashboard/groups');
@@ -192,6 +195,10 @@ export default function GroupDetailPage() {
       setProofTask(task);
       return;
     }
+    if (!task.completedToday && task.deadlineTime && isPastDeadline(task.deadlineTime)) {
+      alert(`Deadline (${task.deadlineTime}) has passed for "${task.title}". You can't mark it done today.`);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completedToday) {
@@ -201,7 +208,7 @@ export default function GroupDetailPage() {
       }
       await fetchData();
     } catch (error) {
-      console.error('Failed:', error);
+      alert(error.message || 'Failed to save');
     } finally {
       setCompleting(null);
       setProofTask(null);
@@ -271,8 +278,8 @@ export default function GroupDetailPage() {
 
 
       {/* Tabs */}
-      <div className="grid grid-cols-4 gap-1 mb-6 p-1 rounded-xl bg-[var(--card-bg)]">
-        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }].map(t => (
+      <div className="grid grid-cols-5 gap-1 mb-6 p-1 rounded-xl bg-[var(--card-bg)]">
+        {[{ id: 'habits', label: 'Habits', icon: Target }, { id: 'shame', label: 'Shame', icon: Skull }, { id: 'activity', label: 'Activity', icon: Activity }, { id: 'leaderboard', label: 'Ranks', icon: Trophy }, { id: 'analytics', label: 'Stats', icon: BarChart3 }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={cn('flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-semibold transition-colors',
               tab === t.id ? 'bg-brand-500/15 text-brand-500' : 'text-muted hover:text-primary hover:bg-[var(--card-bg-hover)]')}>
@@ -307,40 +314,52 @@ export default function GroupDetailPage() {
                 const noActivity = member.totalCount > 0 && member.completedCount === 0;
                 const hasNoTasks = member.totalCount === 0;
                 const lvl = getLevel(member.totalXp || 0);
+                const isShamed = shameUserIds.has(member.user.id);
 
-                // Card keeps the member's assigned color — status is shown via an inline badge + icon.
-                // Perfect: green ring over member color. Everything else: plain member color.
+                // Shamed members get a loud red treatment so the group can see who's slipping.
                 return (
-                  <div key={member.user.id} className={cn('rounded-xl border overflow-hidden',
-                    mColor.bg, mColor.border,
-                    isPerfect && 'ring-1 ring-green-500/40')}>
+                  <div key={member.user.id} className={cn('rounded-xl border overflow-hidden relative',
+                    isShamed ? 'bg-red-500/10 border-red-500/50 ring-2 ring-red-500/40 shadow-lg shadow-red-500/10' :
+                    cn(mColor.bg, mColor.border, isPerfect && 'ring-1 ring-green-500/40'))}>
                     {/* Member Header */}
-                    <button onClick={() => toggleMember(member.user.id)} className="w-full flex items-center gap-4 p-4 hover:bg-[var(--card-bg-hover)] transition-colors">
-                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 relative', mColor.avatarBg, mColor.accent)}>
+                    <button onClick={() => toggleMember(member.user.id)} className={cn('w-full flex items-center gap-4 p-4 transition-colors',
+                      isShamed ? 'hover:bg-red-500/15' : 'hover:bg-[var(--card-bg-hover)]')}>
+                      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 relative',
+                        isShamed ? 'bg-red-500/20 text-red-500 ring-2 ring-red-500' :
+                        cn(mColor.avatarBg, mColor.accent))}>
                         {member.user.avatar ? (
-                          <img src={member.user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                          <img src={member.user.avatar} alt="" className={cn('w-full h-full rounded-full object-cover', isShamed && 'grayscale')} />
                         ) : getInitials(member.user.name)}
-                        {isPerfect && (
+                        {isShamed ? (
+                          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center ring-2 ring-[var(--card-bg-solid)] animate-pulse">
+                            <Skull className="w-3 h-3 text-white" />
+                          </span>
+                        ) : isPerfect && (
                           <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center ring-2 ring-[var(--card-bg-solid)]">
                             <Star className="w-2.5 h-2.5 text-white fill-white" />
                           </span>
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-semibold truncate flex items-center gap-1.5">
+                        <p className={cn('font-semibold truncate flex items-center gap-1.5', isShamed && 'text-red-500')}>
                           {isMe ? 'You' : member.user.name}
                           {member.role === 'ADMIN' && <Crown className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
+                          {isShamed && (
+                            <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-black flex items-center gap-1 shadow-md whitespace-nowrap">
+                              <Skull className="w-3 h-3" /> SHAMED · 2d silent
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                           <span className={cn('font-bold', lvl.color)}>Lv.{lvl.level}</span>
                           <span>·</span>
-                          <span>
+                          <span className={cn(isShamed && 'text-red-500 font-semibold')}>
                             {hasNoTasks ? 'No habits yet' :
                               noActivity ? "Hasn't started today" :
                               `${member.completedCount}/${member.totalCount} done`}
                           </span>
-                          {isPerfect && <span className="ml-1 text-[10px] bg-green-500/20 text-green-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><Star className="w-2.5 h-2.5 fill-green-600" /> Perfect</span>}
-                          {isBehind && <span className="ml-1 text-[10px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><TrendingDown className="w-2.5 h-2.5" /> Behind</span>}
+                          {isPerfect && !isShamed && <span className="ml-1 text-[10px] bg-green-500/20 text-green-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><Star className="w-2.5 h-2.5 fill-green-600" /> Perfect</span>}
+                          {isBehind && !isShamed && <span className="ml-1 text-[10px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><TrendingDown className="w-2.5 h-2.5" /> Behind</span>}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -359,12 +378,23 @@ export default function GroupDetailPage() {
                           </div>
                         </div>
                         <div className="p-2">
-                          {member.tasks.map(task => (
-                            <div key={task.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg', task.completedToday ? 'bg-green-500/5' : 'hover:bg-[var(--card-bg-hover)]')}>
+                          {member.tasks.map(task => {
+                            const lockedByDeadline = isMe && !task.completedToday && task.deadlineTime && isPastDeadline(task.deadlineTime);
+                            return (
+                            <div key={task.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg',
+                              task.completedToday ? 'bg-green-500/5' :
+                              lockedByDeadline ? 'bg-red-500/5' :
+                              'hover:bg-[var(--card-bg-hover)]')}>
                               {/* If it's my task, make it toggleable */}
                               {isMe ? (
-                                <button onClick={() => handleToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
-                                  {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
+                                <button onClick={() => handleToggle(task)}
+                                  disabled={completing === task.id || lockedByDeadline}
+                                  title={lockedByDeadline ? 'Deadline passed — can\'t mark done' : ''}
+                                  className={cn('flex-shrink-0', lockedByDeadline && 'cursor-not-allowed opacity-60')}>
+                                  {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> :
+                                   task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> :
+                                   lockedByDeadline ? <Circle className="w-5 h-5 text-red-500/60" /> :
+                                   <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
                                 </button>
                               ) : (
                                 <div className="flex-shrink-0">
@@ -405,7 +435,8 @@ export default function GroupDetailPage() {
                               )}
                               {isMe && <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary transition-colors"><Edit2 className="w-3.5 h-3.5" /></Link>}
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       </div>
                     )}
@@ -475,8 +506,12 @@ export default function GroupDetailPage() {
           currentUserId={user?.id}
           expandedMember={expandedAnalyticsMember}
           setExpandedMember={setExpandedAnalyticsMember}
+          groupId={groupId}
         />
       )}
+
+      {/* Shame Tab */}
+      {tab === 'shame' && <ShameTab groupId={groupId} currentUserId={user?.id} />}
 
       {/* Invite Modal */}
       {showInvite && <InviteModal group={group} onClose={() => setShowInvite(false)} onInvited={fetchData} />}
@@ -1083,7 +1118,7 @@ function SettingsModal({ group, role, onClose, onSaved }) {
 
 const REACTION_EMOJIS = ['🎉', '💪', '🔥', '❤️', '👏'];
 
-function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setExpandedMember }) {
+function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setExpandedMember, groupId }) {
 
   if (loading && !analytics) {
     return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
@@ -1098,7 +1133,15 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
     <div className="space-y-8">
       {/* Group Pulse — colored KPI tiles with icons */}
       <section>
-        <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Activity className="w-5 h-5 text-brand-500" /> Group Pulse</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg flex items-center gap-2"><Activity className="w-5 h-5 text-brand-500" /> Group Pulse</h2>
+          {groupId && (
+            <Link href={`/dashboard/groups/${groupId}/compare`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 text-sm font-medium">
+              Compare members <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <PulseTile color="blue" icon={<Activity className="w-5 h-5" />} label="Today avg" value={`${groupPulse.todayAvg}%`} sub={`${activeTodayCount} of ${members.length} active`} />
           <PulseTile color="purple" icon={<TrendingUp className="w-5 h-5" />} label="7-day avg" value={`${groupPulse.weekAvg}%`} sub="across all members" />
@@ -1251,6 +1294,275 @@ function AnalyticsTab({ analytics, loading, currentUserId, expandedMember, setEx
   );
 }
 
+function ordinal(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return n + 'th';
+  switch (n % 10) {
+    case 1: return n + 'st';
+    case 2: return n + 'nd';
+    case 3: return n + 'rd';
+    default: return n + 'th';
+  }
+}
+
+// Build a data-driven sub-line. No hardcoded jokes.
+function autoTaunt(item, stats) {
+  const since = new Date(item.since);
+  const sinceLabel = since.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const parts = [`On the wall since ${sinceLabel}`];
+
+  const offender = stats?.repeatOffenders?.find(o => o.userId === item.userId);
+  if (offender && offender.count > 1) parts.push(`${ordinal(offender.count)} offence this month`);
+  if (item.daysMissed >= 7) parts.push('over a week silent');
+
+  return parts.join(' · ');
+}
+
+function ShameTab({ groupId, currentUserId }) {
+  const [items, setItems] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getShameWall(groupId).then(res => {
+      if (cancelled) return;
+      setItems(res.items || []);
+      setStats(res.stats || null);
+    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [groupId]);
+
+  if (loading) {
+    return <div className="py-16 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+  }
+
+  const meIsShamed = items.some(i => i.userId === currentUserId);
+  const ghostPct = stats && stats.memberCount > 0 ? Math.round((stats.openCount / stats.memberCount) * 100) : 0;
+
+  const hasRealRepeats = stats && stats.repeatOffenders.some(o => o.count >= 2);
+  const recentCleared = stats?.recentlyCleared || [];
+
+  return (
+    <div className="space-y-5">
+      {/* Header — compact */}
+      <div className="flex items-start gap-3">
+        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+          items.length > 0 ? 'bg-red-500/15 text-red-500' : 'bg-emerald-500/15 text-emerald-500')}>
+          <Skull className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="font-bold text-lg leading-tight">Wall of Shame</h2>
+          <p className="text-xs text-muted mt-0.5">
+            Skip every habit for 2 days in a row → you land here. Complete any habit to clear it.
+          </p>
+        </div>
+      </div>
+
+      {/* Self banner — when you're on the wall */}
+      {meIsShamed && (
+        <div className="rounded-2xl bg-gradient-to-br from-red-500/15 to-rose-500/10 border-2 border-red-500/40 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center shrink-0 animate-pulse">
+              <Skull className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-red-500 mb-0.5">You're on the wall</p>
+              <p className="text-sm text-muted">Complete any habit in the <span className="font-semibold text-primary">Habits</span> tab today to clear your name.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All-clear celebration */}
+      {!meIsShamed && items.length === 0 && (
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/30 p-5 text-center">
+          <Star className="w-8 h-8 text-emerald-500 fill-emerald-500 mx-auto mb-2" />
+          <p className="font-bold text-emerald-600">All clear</p>
+          <p className="text-sm text-muted">Nobody's been silent for 2+ days. The whole group is showing up.</p>
+        </div>
+      )}
+
+      {/* Group stats — KPI tiles */}
+      {stats && (stats.openCount > 0 || stats.totalEventsThisMonth > 0) && (
+        <div>
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">This month</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <SmallStat color="red" icon={<Skull className="w-4 h-4" />} value={stats.openCount} label="On the wall" sub={`of ${stats.memberCount} members`} />
+            <SmallStat color="orange" icon={<Flame className="w-4 h-4" />} value={`${stats.totalSilentDaysThisMonth}d`} label="Total silent" sub="across all events" />
+            <SmallStat color="purple" icon={<Activity className="w-4 h-4" />} value={stats.totalEventsThisMonth} label="Shame events" sub="from the 1st" />
+            <SmallStat color="green" icon={<Star className="w-4 h-4" />} value={stats.cleanCount} label="Clean record" sub="never shamed" />
+          </div>
+        </div>
+      )}
+
+      {/* Currently on the wall — rich rows showing missed habits */}
+      {items.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Skull className="w-3.5 h-3.5" /> On the wall right now
+          </h3>
+          <div className="space-y-2">
+            {items.map((it) => {
+              const isMine = it.userId === currentUserId;
+              const sinceLabel = new Date(it.since).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              const offender = stats?.repeatOffenders?.find(o => o.userId === it.userId);
+              const isRepeat = offender && offender.count > 1;
+              const overWeek = it.daysMissed >= 7;
+              return (
+                <div key={it.id} className={cn('rounded-2xl border p-3',
+                  isMine ? 'bg-red-500/10 border-red-500/50' : 'bg-[var(--card-bg)] border-red-500/20')}>
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      {it.userAvatar
+                        ? <img src={it.userAvatar} alt="" className="w-12 h-12 rounded-full object-cover grayscale" />
+                        : <div className="w-12 h-12 rounded-full bg-red-500/15 text-red-500 flex items-center justify-center text-sm font-black">{getInitials(it.userName)}</div>}
+                      <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center ring-2 ring-[var(--card-bg-solid)]">
+                        <Skull className="w-3 h-3 text-white" />
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className={cn('font-bold text-sm', isMine && 'text-red-500')}>{isMine ? 'You' : it.userName}</p>
+                        {isRepeat && <span className="text-[9px] bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-full font-bold">{ordinal(offender.count)} TIME</span>}
+                        {overWeek && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">OVER A WEEK</span>}
+                      </div>
+                      <p className="text-[11px] text-muted">Since {sinceLabel}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-2xl font-black text-red-500 tabular-nums leading-none">{it.daysMissed}</p>
+                      <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">days silent</p>
+                    </div>
+                  </div>
+                  {/* Habits being skipped */}
+                  {it.habits && it.habits.length > 0 && (
+                    <div className="mt-2.5 ml-15 pl-15 pt-2 border-t border-red-500/15">
+                      <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1.5">Skipping {it.habits.length} habit{it.habits.length === 1 ? '' : 's'}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {it.habits.slice(0, 5).map(h => (
+                          <span key={h.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--card-bg-hover)] text-[11px] line-through opacity-70">
+                            <span className="w-1.5 h-3 rounded-sm shrink-0" style={{ backgroundColor: h.color || '#ef4444' }} />
+                            {h.title}
+                          </span>
+                        ))}
+                        {it.habits.length > 5 && <span className="text-[11px] text-muted self-center">+{it.habits.length - 5}</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Repeat offenders — only when someone has 2+ events */}
+      {hasRealRepeats && (
+        <div>
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Flame className="w-3.5 h-3.5 text-orange-500" /> Repeat offenders this month
+          </h3>
+          <div className="rounded-2xl glass-card overflow-hidden divide-y divide-[var(--card-border)]">
+            {stats.repeatOffenders.filter(o => o.count >= 2).map((m, i) => {
+              const isMe = m.userId === currentUserId;
+              return (
+                <div key={m.userId} className={cn('flex items-center gap-3 p-3', isMe && 'bg-red-500/10')}>
+                  <div className="w-6 h-6 rounded-md bg-red-500/15 text-red-500 flex items-center justify-center text-[11px] font-black tabular-nums shrink-0">#{i + 1}</div>
+                  {m.avatar
+                    ? <img src={m.avatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                    : <div className="w-8 h-8 rounded-full bg-red-500/15 text-red-500 flex items-center justify-center text-xs font-bold shrink-0">{getInitials(m.name)}</div>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+                      {isMe ? 'You' : m.name}
+                      {m.currentlyOpen && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">LIVE</span>}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-base font-bold text-red-500 tabular-nums">{m.count}</span>
+                    <span className="text-[11px] text-muted ml-1">events · {m.totalDays}d total</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recently cleared — comeback wins */}
+      {recentCleared.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-emerald-500" /> Recently cleared
+          </h3>
+          <div className="rounded-2xl glass-card overflow-hidden divide-y divide-[var(--card-border)]">
+            {recentCleared.map(c => {
+              const cleared = new Date(c.clearedAt);
+              const sinceDate = new Date(c.since);
+              const isMe = c.userId === currentUserId;
+              return (
+                <div key={c.id} className="flex items-center gap-3 p-3">
+                  {c.userAvatar
+                    ? <img src={c.userAvatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                    : <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">{getInitials(c.userName)}</div>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{isMe ? 'You' : c.userName} <span className="text-emerald-500 font-normal">came back</span></p>
+                    <p className="text-[11px] text-muted">Was silent {c.daysMissed}d (from {sinceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) · cleared {cleared.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                  </div>
+                  <div className="text-emerald-500 shrink-0">
+                    <Check className="w-5 h-5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Hall of Honor — compact pill row */}
+      {stats && stats.cleanRecord.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Star className="w-3 h-3 text-emerald-500 fill-emerald-500" /> Clean record this month
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {stats.cleanRecord.map(m => (
+              <div key={m.userId} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                {m.avatar
+                  ? <img src={m.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  : <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center text-[9px] font-bold">{getInitials(m.name)}</div>}
+                <span className="text-[11px] font-medium">{m.userId === currentUserId ? 'You' : m.name}</span>
+              </div>
+            ))}
+            {stats.cleanCount > stats.cleanRecord.length && (
+              <span className="text-[11px] text-muted self-center">+{stats.cleanCount - stats.cleanRecord.length} more</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SmallStat({ color, icon, value, label, sub }) {
+  const map = {
+    red: 'text-red-500',
+    orange: 'text-orange-500',
+    purple: 'text-purple-500',
+    green: 'text-emerald-500'
+  };
+  return (
+    <div className="p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--card-border)]">
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={cn(map[color])}>{icon}</span>
+        <p className="text-[10px] uppercase tracking-wider text-muted font-bold">{label}</p>
+      </div>
+      <p className={cn('text-xl font-black tabular-nums', map[color])}>{value}</p>
+      {sub && <p className="text-[10px] text-muted mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
 function ActivityTab({ groupId, currentUserId, onViewProof }) {
   const [items, setItems] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -1367,7 +1679,8 @@ function ActivityTab({ groupId, currentUserId, onViewProof }) {
                       {' '}completed{' '}
                       <span className="font-medium">{a.taskTitle}</span>
                     </p>
-                    <p className="text-xs text-muted">{new Date(a.completedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    <p className="text-xs text-muted">{new Date(a.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    {a.remark && <p className="text-xs italic text-muted mt-1 break-words">"{a.remark}"</p>}
                   </div>
                   {a.proofUrl && (
                     <button onClick={() => onViewProof?.({ title: a.taskTitle, url: a.proofUrl })}

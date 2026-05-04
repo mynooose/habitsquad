@@ -16,12 +16,13 @@ function getTransporter() {
   return transporter;
 }
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, attachments }) {
   await getTransporter().sendMail({
     from: `"HabitSquad" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
     to,
     subject,
-    html
+    html,
+    ...(attachments ? { attachments } : {})
   });
 }
 

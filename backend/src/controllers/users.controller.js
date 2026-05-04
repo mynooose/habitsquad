@@ -1,4 +1,5 @@
 const userQ = require('../queries/users.queries');
+const { buildWeeklyPdf, buildMonthlyPdf, weekRangeFromTodayKey, monthRangeFromTodayKey } = require('../utils/pdfReport');
 
 async function searchUsers(req, res, next) {
   try {
@@ -24,4 +25,24 @@ async function getUserProfile(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { searchUsers, getUserProfile };
+async function downloadReport(req, res, next) {
+  try {
+    const range = req.query.range === 'month' ? 'month' : 'week';
+    const todayKey = req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+      ? req.query.date
+      : new Date().toISOString().split('T')[0];
+
+    const period = range === 'month' ? monthRangeFromTodayKey(todayKey) : weekRangeFromTodayKey(todayKey);
+    const buf = range === 'month'
+      ? await buildMonthlyPdf(req.user.id, period)
+      : await buildWeeklyPdf(req.user.id, period);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="habitsquad-${range}-${todayKey}.pdf"`);
+    res.send(buf);
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { searchUsers, getUserProfile, downloadReport };

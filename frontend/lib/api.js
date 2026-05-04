@@ -150,10 +150,29 @@ class ApiClient {
     return this.request(`/tasks/${id}`, { method: 'DELETE' });
   }
 
-  async completeTask(id, date = null, proofUrl = null) {
+  async completeTask(id, date = null, proofUrl = null, notes = null) {
     // Always send user's local date (YYYY-MM-DD) so server doesn't guess
     const localDate = date || this.getLocalDateKey();
-    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date: localDate, proofUrl } });
+    return this.request(`/tasks/${id}/complete`, { method: 'POST', body: { date: localDate, proofUrl, notes } });
+  }
+
+  async updateRemark(completionId, remark) {
+    return this.request(`/completions/${completionId}/remark`, { method: 'PATCH', body: { remark } });
+  }
+
+  async getReflections(from = null, to = null) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return this.request(`/reflections${params.toString() ? `?${params}` : ''}`);
+  }
+
+  async getReflection(date) {
+    return this.request(`/reflections?date=${date}`);
+  }
+
+  async saveReflection(date, text) {
+    return this.request('/reflections', { method: 'POST', body: { date, text } });
   }
 
   getLocalDateKey() {
@@ -250,6 +269,32 @@ class ApiClient {
 
   async getGroupAnalytics(groupId, days = 30) {
     return this.request(`/groups/${groupId}/analytics?days=${days}&date=${this.getLocalDateKey()}`);
+  }
+
+  async getShameWall(groupId) {
+    return this.request(`/groups/${groupId}/shame-wall`);
+  }
+
+  async getGroupCompare(groupId, { members = [], from, to } = {}) {
+    const params = new URLSearchParams();
+    if (members.length) params.set('members', members.join(','));
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return this.request(`/groups/${groupId}/compare?${params}`);
+  }
+
+  async downloadReport(range = 'week') {
+    const url = `${API_URL}/users/me/report?range=${range}&date=${this.getLocalDateKey()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${this.getToken()}` } });
+    if (!res.ok) throw new Error('Failed to download');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `habitsquad-${range}-${this.getLocalDateKey()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
 
   async getGroupActivity(groupId, before = null, limit = 20) {

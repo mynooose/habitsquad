@@ -19,6 +19,7 @@ const createTaskSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   groupId: z.string().nullable().optional(),
   requiresProof: z.boolean().optional(),
+  isCritical: z.boolean().optional(),
   deadlineTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(),
   redistribute: z.boolean().optional()
 });

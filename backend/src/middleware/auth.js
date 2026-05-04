@@ -27,7 +27,7 @@ const authenticate = async (req, res, next) => {
     // Lightweight select — avatar/bio loaded only via /auth/me when needed
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, name: true, totalXp: true, createdAt: true, deletedAt: true }
+      select: { id: true, email: true, name: true, totalXp: true, timezone: true, createdAt: true, deletedAt: true }
     });
 
     if (!user || user.deletedAt) {

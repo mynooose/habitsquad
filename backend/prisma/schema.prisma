@@ -24,6 +24,10 @@ model User {
   resetToken        String?  @unique
   resetTokenExpiry  DateTime?
   dailyEmailTime    String   @default("08:00")
+  weeklyReviewEnabled Boolean @default(false)
+  weeklyReviewHour    String  @default("21:00")
+  monthlySummaryEnabled Boolean @default(false)
+  shameEmailEnabled   Boolean @default(false)
   onboardedAt       DateTime?
   deletedAt         DateTime?
   phone             String?  @unique
@@ -44,6 +48,8 @@ model User {
   comments      Comment[]
   activitiesActed   GroupActivity[] @relation("ActivityActor")
   activitiesTargeted GroupActivity[] @relation("ActivityTarget")
+  reflections   Reflection[]
+  shameEvents   ShameEvent[]
 
   @@map("users")
 }
@@ -74,6 +80,7 @@ model Task {
   weightage   Int           @default(5)
   isActive      Boolean       @default(true)
   requiresProof Boolean       @default(true)
+  isCritical    Boolean       @default(false)
   deadlineTime  String?       // "HH:MM" 24-hour, in user's local timezone
   color         String?
   createdAt   DateTime      @default(now())
@@ -86,6 +93,7 @@ model Task {
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   completions TaskCompletion[]
+  shameEvents ShameEvent[]
 
   @@map("tasks")
 }
@@ -138,6 +146,7 @@ model Group {
   tasks       Task[]
   invites     GroupInvite[]
   activities  GroupActivity[]
+  shameEvents ShameEvent[]
 
   @@map("groups")
 }
@@ -213,6 +222,38 @@ model Comment {
 
   @@index([completionId])
   @@map("comments")
+}
+
+model ShameEvent {
+  id          String    @id @default(cuid())
+  groupId     String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  daysMissed  Int       @default(2)
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@index([groupId, resolvedAt])
+  @@index([groupId, userId, resolvedAt])
+  @@index([taskId])
+  @@map("shame_events")
+}
+
+model Reflection {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("reflections")
 }
 
 model GroupActivity {

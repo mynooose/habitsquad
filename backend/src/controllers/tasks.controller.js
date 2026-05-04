@@ -5,6 +5,26 @@ const taskQ = require('../queries/tasks.queries');
 const groupQ = require('../queries/groups.queries');
 const prisma = require('../database/prisma');
 const activityLog = require('../utils/activityLog');
+const { checkInactivityForMember } = require('../utils/criticalCheck');
+
+function currentLocalDateKey(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year').value;
+    const m = parts.find(p => p.type === 'month').value;
+    const d = parts.find(p => p.type === 'day').value;
+    return `${y}-${m}-${d}`;
+  } catch { return null; }
+}
+
+function currentLocalHourMinuteInTz(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    const h = parseInt(parts.find(p => p.type === 'hour').value, 10) % 24;
+    const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
+    return { h, m };
+  } catch { return { h: 0, m: 0 }; }
+}
 
 async function getBudget(req, res, next) {
   try {
@@ -32,6 +52,8 @@ async function listTasks(req, res, next) {
       ...task,
       completedToday: task.completions.length > 0,
       proofUrl: task.completions[0]?.proofUrl || null,
+      remark: task.completions[0]?.notes || null,
+      completionId: task.completions[0]?.id || null,
       completions: undefined
     }));
     res.json({ tasks: tasksWithStatus });
@@ -196,11 +218,14 @@ async function completeTask(req, res, next) {
     const { date, notes, proofUrl } = req.body;
     // Expect date as YYYY-MM-DD string from client; if missing, use UTC today
     let targetDate;
+    let targetDateKey;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       targetDate = parseDateKey(date);
+      targetDateKey = date;
     } else {
       targetDate = new Date();
       targetDate.setUTCHours(0, 0, 0, 0);
+      targetDateKey = targetDate.toISOString().split('T')[0];
     }
 
     // Parallel: fetch task + check existing completion
@@ -215,11 +240,38 @@ async function completeTask(req, res, next) {
     }
     if (existing) return res.status(400).json({ error: 'Task already completed for this date' });
 
+    // Deadline enforcement: if task has a deadline and the user is trying to complete
+    // it for *today* in their local timezone, the deadline (HH:MM in their local tz)
+    // must not have passed yet. Past dates can still be marked done (allows backfill
+    // of yesterday before the calendar day rolls over the user's tz).
+    if (task.deadlineTime) {
+      const userTz = req.user.timezone || 'UTC';
+      const localToday = currentLocalDateKey(userTz);
+      if (targetDateKey === localToday) {
+        const nowH = currentLocalHourMinuteInTz(userTz);
+        const [dh, dm] = task.deadlineTime.split(':').map(Number);
+        const deadlineMinutes = dh * 60 + dm;
+        const nowMinutes = nowH.h * 60 + nowH.m;
+        if (nowMinutes > deadlineMinutes) {
+          return res.status(400).json({ error: `Deadline (${task.deadlineTime}) for "${task.title}" has passed.` });
+        }
+      }
+    }
+
     // Parallel: create completion + award XP
     const [completion] = await Promise.all([
       taskQ.createCompletion({ taskId: req.params.id, userId: req.user.id, date: targetDate, notes, proofUrl }),
       prisma.user.update({ where: { id: req.user.id }, data: { totalXp: { increment: task.weightage } } })
     ]);
+
+    // Instantly clear any open Wall-of-Shame event for this user in this group.
+    // The hourly cron also resolves these, but waiting an hour for visible feedback feels broken.
+    if (task.groupId) {
+      prisma.shameEvent.updateMany({
+        where: { userId: req.user.id, groupId: task.groupId, resolvedAt: null },
+        data: { resolvedAt: new Date() }
+      }).catch(err => console.error('shame resolve failed:', err.message));
+    }
 
     res.status(201).json({ completion, xpEarned: task.weightage });
   } catch (error) {
@@ -259,6 +311,23 @@ async function uncompleteTask(req, res, next) {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { totalXp: true } });
     if (user && user.totalXp < 0) {
       await prisma.user.update({ where: { id: req.user.id }, data: { totalXp: 0 } });
+    }
+
+    // Re-evaluate shame BEFORE responding so the frontend's immediate refetch
+    // sees the updated state (avoids race condition).
+    if (task?.groupId) {
+      try {
+        await checkInactivityForMember({
+          userId: req.user.id,
+          userEmail: '',
+          userName: '',
+          userTimezone: req.user.timezone || 'UTC',
+          groupId: task.groupId,
+          groupName: ''
+        });
+      } catch (err) {
+        console.error('shame re-eval after uncomplete failed:', err.message);
+      }
     }
 
     res.json({ success: true });

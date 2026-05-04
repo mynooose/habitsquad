@@ -415,6 +415,7 @@ export default function NewPage() {
             </button>
           </div>
 
+
           <div className="p-4 rounded-xl glass-card space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { ArrowLeft, Loader2, TrendingUp, Flame, Activity, BarChart3, Trophy, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, TrendingUp, Flame, Activity, BarChart3, Trophy, CheckCircle2, Clock, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function PersonalAnalyticsPage() {
@@ -28,9 +28,9 @@ export default function PersonalAnalyticsPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Link href="/dashboard" className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-muted hover:text-primary"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[200px]">
           <h1 className="text-2xl font-bold">Your Analytics</h1>
           <p className="text-muted text-sm">Your last {data.days} days at a glance</p>
         </div>
@@ -42,6 +42,7 @@ export default function PersonalAnalyticsPage() {
             </button>
           ))}
         </div>
+        <DownloadReportMenu />
       </div>
 
       {/* Pulse — colored tiles */}
@@ -171,6 +172,44 @@ export default function PersonalAnalyticsPage() {
             </div>
           </div>
         </section>
+      )}
+    </div>
+  );
+}
+
+function DownloadReportMenu() {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(null);
+
+  const download = async (range) => {
+    setBusy(range);
+    try { await api.downloadReport(range); }
+    catch (e) { alert(e.message || 'Download failed'); }
+    finally { setBusy(null); setOpen(false); }
+  };
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 text-sm font-medium">
+        <Download className="w-4 h-4" /> PDF
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-10 z-20 min-w-[180px] p-1 rounded-xl bg-[var(--card-bg-solid)] border border-[var(--card-border)] shadow-xl">
+            <button onClick={() => download('week')} disabled={busy}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm flex items-center gap-2 disabled:opacity-50">
+              {busy === 'week' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Last 7 days
+            </button>
+            <button onClick={() => download('month')} disabled={busy}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--card-bg-hover)] text-sm flex items-center gap-2 disabled:opacity-50">
+              {busy === 'month' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Previous month
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const prisma = require('../database/prisma');
 const { sendEmail } = require('./mailer');
 const { getApplicableTasks } = require('./helpers');
+const { buildWeeklyPdf, buildMonthlyPdf, weekRangeFromTodayKey, monthRangeFromTodayKey } = require('./pdfReport');
 
 function buildTasksHtml(tasks, groups) {
   let html = '';
@@ -50,9 +51,162 @@ function currentHourInTimezone(tz) {
   } catch { return null; }
 }
 
+// Returns short weekday name (Sun, Mon, ...) in the user's timezone
+function currentWeekdayInTimezone(tz) {
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(new Date());
+  } catch { return null; }
+}
+
+// Returns YYYY-MM-DD in the user's local timezone for "today"
+function localDateKey(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year').value;
+    const m = parts.find(p => p.type === 'month').value;
+    const d = parts.find(p => p.type === 'day').value;
+    return `${y}-${m}-${d}`;
+  } catch { return null; }
+}
+
+function parseDateKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function reviewEmailHtml({ name, kind, dateLabel }) {
+  const title = kind === 'month' ? 'Monthly summary' : 'Sunday review';
+  const verb = kind === 'month' ? 'last month' : 'last week';
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#0a0a0a;color:#fff;border-radius:12px;">
+      <h2 style="color:#a78bfa;margin-bottom:4px;">${title} — ${name.split(' ')[0]}</h2>
+      <p style="color:#888;margin-top:0;">${dateLabel}</p>
+      <div style="padding:16px;background:#111;border-radius:8px;margin:16px 0;">
+        <p style="color:#fff;margin:0;font-size:14px;">Your ${verb} as a PDF is attached. Numbers, daily breakdown, habit completion rates, your reflections, and any notes you wrote on completions.</p>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <a href="${process.env.FRONTEND_URL}/dashboard/analytics" style="background:#a78bfa;color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:bold;">
+          Open analytics
+        </a>
+      </div>
+      <p style="color:#555;font-size:11px;text-align:center;margin-top:20px;">
+        Don't want this? <a href="${process.env.FRONTEND_URL}/dashboard/profile" style="color:#888;text-decoration:underline;">Turn it off</a> in your profile.
+      </p>
+    </div>`;
+}
+
+async function sendWeeklyReview(user) {
+  const tz = user.timezone || 'UTC';
+  const todayKey = localDateKey(tz);
+  if (!todayKey) return;
+  const range = weekRangeFromTodayKey(todayKey);
+  const pdf = await buildWeeklyPdf(user.id, range);
+  const labelStart = range.start.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const labelEndDate = new Date(range.endExclusive); labelEndDate.setUTCDate(labelEndDate.getUTCDate() - 1);
+  const labelEnd = labelEndDate.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+
+  await sendEmail({
+    to: user.email,
+    subject: `Your week — ${labelStart} – ${labelEnd}`,
+    html: reviewEmailHtml({ name: user.name, kind: 'week', dateLabel: `Week of ${labelStart} – ${labelEnd}` }),
+    attachments: [{ filename: `habitsquad-week-${todayKey}.pdf`, content: pdf, contentType: 'application/pdf' }]
+  });
+}
+
+async function sendMonthlyReview(user) {
+  const tz = user.timezone || 'UTC';
+  const todayKey = localDateKey(tz);
+  if (!todayKey) return;
+  const range = monthRangeFromTodayKey(todayKey);
+  const pdf = await buildMonthlyPdf(user.id, range);
+  const monthLabel = range.start.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+
+  await sendEmail({
+    to: user.email,
+    subject: `Your month — ${monthLabel}`,
+    html: reviewEmailHtml({ name: user.name, kind: 'month', dateLabel: monthLabel }),
+    attachments: [{ filename: `habitsquad-month-${todayKey}.pdf`, content: pdf, contentType: 'application/pdf' }]
+  });
+}
+
+async function sendWeeklyReviews() {
+  try {
+    const users = await prisma.user.findMany({
+      where: { weeklyReviewEnabled: true, deletedAt: null },
+      select: { id: true, email: true, name: true, timezone: true, weeklyReviewHour: true }
+    });
+    if (users.length === 0) return;
+
+    const dueUsers = users.filter(u => {
+      const tz = u.timezone || 'UTC';
+      const preferredH = parseInt((u.weeklyReviewHour || '21:00').split(':')[0], 10);
+      const nowH = currentHourInTimezone(tz);
+      const wd = currentWeekdayInTimezone(tz);
+      return nowH !== null && nowH === preferredH && wd === 'Sun';
+    });
+    if (dueUsers.length === 0) return;
+
+    for (const user of dueUsers) {
+      try {
+        await sendWeeklyReview(user);
+        console.log(`  Sent weekly review to ${user.email}`);
+      } catch (err) {
+        console.error(`  Weekly review failed for ${user.email}:`, err.message);
+      }
+    }
+    console.log(`Weekly review job complete. Sent to ${dueUsers.length} user(s).`);
+  } catch (err) {
+    console.error('Weekly review job error:', err.message);
+  }
+}
+
+function currentDayOfMonthInTimezone(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, day: '2-digit' }).formatToParts(new Date());
+    const d = parts.find(p => p.type === 'day');
+    return d ? parseInt(d.value, 10) : null;
+  } catch { return null; }
+}
+
+async function sendMonthlyReviews() {
+  try {
+    const users = await prisma.user.findMany({
+      where: { monthlySummaryEnabled: true, deletedAt: null },
+      select: { id: true, email: true, name: true, timezone: true, weeklyReviewHour: true }
+    });
+    if (users.length === 0) return;
+
+    // Fires on the 1st of each month at user's weeklyReviewHour (reusing same hour)
+    const dueUsers = users.filter(u => {
+      const tz = u.timezone || 'UTC';
+      const preferredH = parseInt((u.weeklyReviewHour || '21:00').split(':')[0], 10);
+      const nowH = currentHourInTimezone(tz);
+      const dom = currentDayOfMonthInTimezone(tz);
+      return nowH !== null && nowH === preferredH && dom === 1;
+    });
+    if (dueUsers.length === 0) return;
+
+    for (const user of dueUsers) {
+      try {
+        await sendMonthlyReview(user);
+        console.log(`  Sent monthly summary to ${user.email}`);
+      } catch (err) {
+        console.error(`  Monthly summary failed for ${user.email}:`, err.message);
+      }
+    }
+    console.log(`Monthly summary job complete. Sent to ${dueUsers.length} user(s).`);
+  } catch (err) {
+    console.error('Monthly summary job error:', err.message);
+  }
+}
+
 async function sendDailyEmails() {
   const runTs = new Date().toISOString();
   console.log(`[${runTs}] Running hourly daily-email job...`);
+
+  // Always check weekly + monthly reviews on the same hourly tick (separate criteria)
+  sendWeeklyReviews().catch(err => console.error('weekly review error:', err.message));
+  sendMonthlyReviews().catch(err => console.error('monthly review error:', err.message));
 
   try {
     const users = await prisma.user.findMany({

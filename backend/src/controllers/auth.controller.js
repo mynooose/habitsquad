@@ -139,7 +139,7 @@ async function getMe(req, res, next) {
 
 async function updateMe(req, res, next) {
   try {
-    const { name, avatar, dob, gender, bio, dailyEmailEnabled, dailyEmailTime, timezone, onboardedAt } = req.body;
+    const { name, avatar, dob, gender, bio, dailyEmailEnabled, dailyEmailTime, weeklyReviewEnabled, weeklyReviewHour, monthlySummaryEnabled, shameEmailEnabled, timezone, onboardedAt } = req.body;
     const data = {};
     if (name !== undefined) data.name = name;
     if (avatar !== undefined) data.avatar = avatar;
@@ -148,6 +148,10 @@ async function updateMe(req, res, next) {
     if (bio !== undefined) data.bio = bio;
     if (dailyEmailEnabled !== undefined) data.dailyEmailEnabled = dailyEmailEnabled;
     if (dailyEmailTime !== undefined && /^\d{2}:\d{2}$/.test(dailyEmailTime)) data.dailyEmailTime = dailyEmailTime;
+    if (weeklyReviewEnabled !== undefined) data.weeklyReviewEnabled = weeklyReviewEnabled;
+    if (weeklyReviewHour !== undefined && /^\d{2}:\d{2}$/.test(weeklyReviewHour)) data.weeklyReviewHour = weeklyReviewHour;
+    if (monthlySummaryEnabled !== undefined) data.monthlySummaryEnabled = monthlySummaryEnabled;
+    if (shameEmailEnabled !== undefined) data.shameEmailEnabled = shameEmailEnabled;
     if (timezone !== undefined && typeof timezone === 'string' && timezone.length < 64) data.timezone = timezone;
     if (onboardedAt !== undefined) data.onboardedAt = onboardedAt ? new Date(onboardedAt) : null;
 

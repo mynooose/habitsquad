@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera, ImagePlus, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Circle, ExternalLink, Camera, ImagePlus, Clock, MessageSquare, Sparkles } from 'lucide-react';
 // Link still used for group name links
 import { cn, getScoreColor, getScoreBgColor, getDateKey, isToday, getFrequencyLabel, formatDeadline, isPastDeadline } from '@/lib/utils';
 
@@ -59,6 +59,10 @@ function CalendarContent() {
       setProofTask(task);
       return;
     }
+    if (!task.completed && task.deadlineTime && isPastDeadline(task.deadlineTime)) {
+      alert(`Deadline (${task.deadlineTime}) has passed for "${task.title}". You can't mark it done today.`);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completed) {
@@ -68,7 +72,7 @@ function CalendarContent() {
       }
       await fetchCalendar();
     } catch (error) {
-      console.error('Failed:', error);
+      alert(error.message || 'Failed to save');
     } finally {
       setCompleting(null);
       setProofTask(null);
@@ -170,6 +174,9 @@ function CalendarContent() {
                   <div className="h-full rounded-full bg-white/30 transition-all" style={{ width: `${selectedData.score}%` }} />
                 </div>
               </div>
+
+              {/* Daily reflection */}
+              <ReflectionSidebarBlock dateKey={selectedDate} />
 
               {/* Personal tasks */}
               {groupedTasks?.personal?.length > 0 && (
@@ -291,39 +298,81 @@ function ProofUpload({ onSubmit, onCancel }) {
 
 function CalendarTask({ task, canToggle, completing, onToggle }) {
   const t = task;
+  const lockedByDeadline = canToggle && !t.completed && t.deadlineTime && isPastDeadline(t.deadlineTime);
   return (
-    <div className={cn('flex items-center gap-2.5 p-2.5 rounded-lg transition-colors', t.completed ? 'bg-green-500/5' : 'hover:bg-[var(--card-bg-hover)]')}>
-      {canToggle ? (
-        <button onClick={() => onToggle(t)} disabled={completing === t.id} className="flex-shrink-0">
-          {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted hover:text-green-400 transition-colors" />}
-        </button>
-      ) : (
-        <div className="flex-shrink-0">
-          {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted" />}
+    <div className={cn('p-2.5 rounded-lg transition-colors',
+      t.completed ? 'bg-green-500/5' :
+      lockedByDeadline ? 'bg-red-500/5' :
+      'hover:bg-[var(--card-bg-hover)]')}>
+      <div className="flex items-center gap-2.5">
+        {canToggle ? (
+          <button onClick={() => onToggle(t)}
+            disabled={completing === t.id || lockedByDeadline}
+            title={lockedByDeadline ? 'Deadline passed — can\'t mark done' : ''}
+            className={cn('flex-shrink-0', lockedByDeadline && 'cursor-not-allowed opacity-60')}>
+            {completing === t.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> :
+             t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> :
+             lockedByDeadline ? <Circle className="w-4 h-4 text-red-500/60" /> :
+             <Circle className="w-4 h-4 text-muted hover:text-green-400 transition-colors" />}
+          </button>
+        ) : (
+          <div className="flex-shrink-0">
+            {t.completed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Circle className="w-4 h-4 text-muted" />}
+          </div>
+        )}
+        <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
+        <div className="flex-1 min-w-0">
+          <p className={cn('text-sm truncate', t.completed ? 'text-muted line-through' : 'text-primary')}>{t.title}</p>
+          <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+            <span>{getFrequencyLabel(t.frequency)}</span>
+            {t.deadlineTime && canToggle && (
+              <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
+                t.completed ? 'bg-[var(--card-bg-hover)] text-muted' :
+                isPastDeadline(t.deadlineTime) ? 'bg-red-500/15 text-red-400' :
+                'bg-blue-500/15 text-blue-400')}>
+                <Clock className="w-3 h-3" />
+                {isPastDeadline(t.deadlineTime) && !t.completed ? `Overdue ${formatDeadline(t.deadlineTime)}` : `by ${formatDeadline(t.deadlineTime)}`}
+              </span>
+            )}
+            {t.deadlineTime && !canToggle && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold bg-[var(--card-bg-hover)] text-muted">
+                <Clock className="w-3 h-3" /> by {formatDeadline(t.deadlineTime)}
+              </span>
+            )}
+          </p>
+        </div>
+        {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+      </div>
+      {t.remark && (
+        <div className="mt-1.5 ml-7 flex items-start gap-1.5">
+          <MessageSquare className="w-3 h-3 text-muted mt-0.5 flex-shrink-0 opacity-60" />
+          <p className="text-xs italic text-muted">{t.remark}</p>
         </div>
       )}
-      <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#22c55e' }} />
-      <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate', t.completed ? 'text-muted line-through' : 'text-primary')}>{t.title}</p>
-        <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
-          <span>{getFrequencyLabel(t.frequency)}</span>
-          {t.deadlineTime && canToggle && (
-            <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
-              t.completed ? 'bg-[var(--card-bg-hover)] text-muted' :
-              isPastDeadline(t.deadlineTime) ? 'bg-red-500/15 text-red-400' :
-              'bg-blue-500/15 text-blue-400')}>
-              <Clock className="w-3 h-3" />
-              {isPastDeadline(t.deadlineTime) && !t.completed ? `Overdue ${formatDeadline(t.deadlineTime)}` : `by ${formatDeadline(t.deadlineTime)}`}
-            </span>
-          )}
-          {t.deadlineTime && !canToggle && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold bg-[var(--card-bg-hover)] text-muted">
-              <Clock className="w-3 h-3" /> by {formatDeadline(t.deadlineTime)}
-            </span>
-          )}
-        </p>
+    </div>
+  );
+}
+
+function ReflectionSidebarBlock({ dateKey }) {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.getReflection(dateKey).then(({ reflections }) => {
+      if (!cancelled) setText(reflections?.[0]?.text || '');
+    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [dateKey]);
+  if (loading) return null;
+  if (!text) return null;
+  return (
+    <div className="mb-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Sparkles className="w-3 h-3 text-purple-400" />
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-purple-400">Reflection</p>
       </div>
-      {t.requiresProof && !t.completed && <Camera className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+      <p className="text-sm italic text-primary">"{text}"</p>
     </div>
   );
 }

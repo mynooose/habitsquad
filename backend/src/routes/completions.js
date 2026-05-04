@@ -8,5 +8,6 @@ router.use(authenticate);
 
 router.get('/', ctrl.listCompletions);
 router.get('/calendar', ctrl.getCalendar);
+router.patch('/:id/remark', ctrl.updateRemark);
 
 module.exports = router;

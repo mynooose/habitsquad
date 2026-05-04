@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info, ImagePlus, Clock } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Flame, Target, Trophy, ArrowUp, ArrowDown, Edit2, Loader2, ChevronRight, ChevronLeft, Minus, Zap, Camera, X, BarChart3, Info, ImagePlus, Clock, MessageSquare, Pencil, Check, Sparkles } from 'lucide-react';
 import { cn, formatDate, getScoreColor, getFrequencyLabel, TASK_COLORS, formatDeadline, isPastDeadline } from '@/lib/utils';
 
 function getLocalDateKey(d = new Date()) {
@@ -67,6 +67,10 @@ export default function DashboardPage() {
       setProofTask(task);
       return;
     }
+    if (!task.completedToday && task.deadlineTime && isPastDeadline(task.deadlineTime)) {
+      alert(`Deadline (${task.deadlineTime}) has passed for "${task.title}". You can't mark it done today.`);
+      return;
+    }
     setCompleting(task.id);
     try {
       if (task.completedToday) {
@@ -76,10 +80,20 @@ export default function DashboardPage() {
       }
       await fetchData();
     } catch (error) {
-      console.error('Failed:', error);
+      alert(error.message || 'Failed to save');
     } finally {
       setCompleting(null);
       setProofTask(null);
+    }
+  };
+
+  const handleSaveRemark = async (task, remark) => {
+    if (!task.completionId) return;
+    try {
+      await api.updateRemark(task.completionId, remark);
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, remark: remark.trim() || null } : t));
+    } catch (e) {
+      console.error('Failed to save remark:', e);
     }
   };
 
@@ -303,7 +317,7 @@ export default function DashboardPage() {
       {/* Personal (solo) Tasks — softer framing now that groups are primary */}
       {personalTasks.length > 0 && (
         <>
-          <TaskSection title="Just for me" tasks={personalTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
+          <TaskSection title="Just for me" tasks={personalTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} onSaveRemark={handleSaveRemark} />
           {(!groups || groups.length === 0) && (
             <Link href="/dashboard/new"
               className="block mb-4 px-4 py-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/15 text-sm text-brand-500 font-semibold flex items-center justify-between gap-3">
@@ -315,8 +329,11 @@ export default function DashboardPage() {
 
       {/* Group Tasks */}
       {groupedTasks.map(({ group, tasks: gTasks }) => (
-        <TaskSection key={group.id} title={group.name} groupId={group.id} color={group.color} tasks={gTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} />
+        <TaskSection key={group.id} title={group.name} groupId={group.id} color={group.color} tasks={gTasks} completing={completing} onToggle={handleToggle} onViewProof={setViewProof} onSaveRemark={handleSaveRemark} />
       ))}
+
+      {/* Daily reflection — the most valuable line in the day */}
+      {tasks.length > 0 && <DailyReflection />}
 
       {/* Proof Viewer */}
       {viewProof && (
@@ -408,7 +425,7 @@ function ProofModal({ task, onClose, onSubmit }) {
   );
 }
 
-function TaskSection({ title, groupId, color, tasks, completing, onToggle, onViewProof }) {
+function TaskSection({ title, groupId, color, tasks, completing, onToggle, onViewProof, onSaveRemark }) {
   const completedCount = tasks.filter(t => t.completedToday).length;
   const completedPts = tasks.filter(t => t.completedToday).reduce((s, t) => s + t.weightage, 0);
   const totalPts = tasks.reduce((s, t) => s + t.weightage, 0);
@@ -432,37 +449,155 @@ function TaskSection({ title, groupId, color, tasks, completing, onToggle, onVie
       </div>
       <div className="rounded-[24px] soft-card divide-y divide-[var(--card-border)] overflow-hidden">
         {tasks.map(task => (
-          <div key={task.id} className={cn('flex items-center gap-3 px-4 py-3 group transition-colors', task.completedToday ? 'bg-green-500/5' : 'hover:bg-white/[0.02]')}>
-            <button onClick={() => onToggle(task)} disabled={completing === task.id} className="flex-shrink-0">
-              {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> : task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
-            </button>
-            <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
-            <div className="flex-1 min-w-0">
-              <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
-              <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
-                <span>{getFrequencyLabel(task.frequency)}</span>
-                {task.deadlineTime && (
-                  <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
-                    task.completedToday ? 'bg-[var(--card-bg-hover)] text-muted' :
-                    isPastDeadline(task.deadlineTime) ? 'bg-red-500/15 text-red-400' :
-                    'bg-blue-500/15 text-blue-400')}>
-                    <Clock className="w-3 h-3" />
-                    {isPastDeadline(task.deadlineTime) && !task.completedToday ? `Overdue ${formatDeadline(task.deadlineTime)}` : `by ${formatDeadline(task.deadlineTime)}`}
-                  </span>
-                )}
-              </p>
-            </div>
-            {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
-            {task.proofUrl && task.completedToday && (
-              <button onClick={() => onViewProof?.({ title: task.title, url: task.proofUrl })}
-                className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-green-500/30 hover:border-green-500/60 transition-colors">
-                <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
-              </button>
-            )}
-            <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
-            <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-[var(--card-bg-hover)] text-muted')}>{task.weightage}pts</div>
-          </div>
+          <TaskRow key={task.id} task={task} completing={completing} onToggle={onToggle} onViewProof={onViewProof} onSaveRemark={onSaveRemark} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskRow({ task, completing, onToggle, onViewProof, onSaveRemark }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.remark || '');
+  const lockedByDeadline = !task.completedToday && task.deadlineTime && isPastDeadline(task.deadlineTime);
+
+  useEffect(() => { setDraft(task.remark || ''); }, [task.remark]);
+
+  const save = async () => {
+    if ((task.remark || '') === draft.trim()) { setEditing(false); return; }
+    await onSaveRemark?.(task, draft.trim());
+    setEditing(false);
+  };
+
+  return (
+    <div className={cn('px-4 py-3 group transition-colors',
+      task.completedToday ? 'bg-green-500/5' :
+      lockedByDeadline ? 'bg-red-500/5' :
+      'hover:bg-white/[0.02]')}>
+      <div className="flex items-center gap-3">
+        <button onClick={() => onToggle(task)}
+          disabled={completing === task.id || lockedByDeadline}
+          title={lockedByDeadline ? 'Deadline passed — can\'t mark done' : ''}
+          className={cn('flex-shrink-0', lockedByDeadline && 'cursor-not-allowed opacity-60')}>
+          {completing === task.id ? <Loader2 className="w-5 h-5 animate-spin text-brand-500" /> :
+           task.completedToday ? <CheckCircle2 className="w-5 h-5 text-green-500" /> :
+           lockedByDeadline ? <Circle className="w-5 h-5 text-red-500/60" /> :
+           <Circle className="w-5 h-5 text-muted hover:text-green-400 transition-colors" />}
+        </button>
+        <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: task.color || TASK_COLORS[0] }} />
+        <div className="flex-1 min-w-0">
+          <p className={cn('text-sm font-medium', task.completedToday && 'text-muted line-through')}>{task.title}</p>
+          <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+            <span>{getFrequencyLabel(task.frequency)}</span>
+            {task.deadlineTime && (
+              <span className={cn('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold',
+                task.completedToday ? 'bg-[var(--card-bg-hover)] text-muted' :
+                isPastDeadline(task.deadlineTime) ? 'bg-red-500/15 text-red-400' :
+                'bg-blue-500/15 text-blue-400')}>
+                <Clock className="w-3 h-3" />
+                {isPastDeadline(task.deadlineTime) && !task.completedToday ? `Overdue ${formatDeadline(task.deadlineTime)}` : `by ${formatDeadline(task.deadlineTime)}`}
+              </span>
+            )}
+          </p>
+        </div>
+        {task.requiresProof && !task.completedToday && <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+        {task.proofUrl && task.completedToday && (
+          <button onClick={() => onViewProof?.({ title: task.title, url: task.proofUrl })}
+            className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-green-500/30 hover:border-green-500/60 transition-colors">
+            <img src={task.proofUrl} alt="proof" className="w-full h-full object-cover" />
+          </button>
+        )}
+        {task.completedToday && task.completionId && !editing && !task.remark && (
+          <button onClick={() => setEditing(true)} title="Add a note"
+            className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary opacity-60 hover:opacity-100 transition-all">
+            <MessageSquare className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <Link href={`/dashboard/tasks/${task.id}`} className="p-1.5 rounded-lg hover:bg-[var(--card-bg-hover)] text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></Link>
+        <div className={cn('px-2 py-0.5 rounded text-xs font-bold tabular-nums', task.completedToday ? 'bg-green-500/15 text-green-400' : 'bg-[var(--card-bg-hover)] text-muted')}>{task.weightage}pts</div>
+      </div>
+      {/* Remark display / editor — only when completed */}
+      {task.completedToday && task.completionId && (editing ? (
+        <div className="mt-2 ml-8 flex items-start gap-2">
+          <MessageSquare className="w-3.5 h-3.5 text-muted mt-2 flex-shrink-0" />
+          <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value.slice(0, 500))}
+            onBlur={save}
+            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); if (e.key === 'Escape') { setDraft(task.remark || ''); setEditing(false); } }}
+            placeholder="A note for this completion (optional)…"
+            className="flex-1 px-2 py-1.5 rounded-lg bg-[var(--card-bg-hover)] border border-[var(--card-border)] text-xs placeholder-[var(--foreground-muted)] focus:outline-none focus:border-brand-500 resize-none"
+            rows={2} />
+        </div>
+      ) : task.remark && (
+        <div className="mt-1.5 ml-8 flex items-start gap-2 group/remark">
+          <MessageSquare className="w-3.5 h-3.5 text-muted mt-0.5 flex-shrink-0 opacity-60" />
+          <p className="flex-1 text-xs italic text-muted">{task.remark}</p>
+          <button onClick={() => setEditing(true)} title="Edit note"
+            className="p-1 rounded hover:bg-[var(--card-bg-hover)] text-muted opacity-0 group-hover/remark:opacity-100 transition-opacity">
+            <Pencil className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function getLocalDateKeyToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function DailyReflection() {
+  const dateKey = getLocalDateKeyToday();
+  const [text, setText] = useState('');
+  const [saved, setSaved] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [savedAt, setSavedAt] = useState(null);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getReflection(dateKey).then(({ reflections }) => {
+      if (cancelled) return;
+      const t = reflections?.[0]?.text || '';
+      setText(t);
+      setSaved(t);
+    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [dateKey]);
+
+  const persist = async () => {
+    if (text === saved) return;
+    try {
+      await api.saveReflection(dateKey, text);
+      setSaved(text);
+      setSavedAt(new Date());
+    } catch (e) { console.error('Save reflection failed:', e); }
+  };
+
+  const isDirty = text !== saved;
+
+  return (
+    <div className="mt-6 mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-4 h-4 text-purple-400" />
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">End-of-day reflection</h2>
+        {savedAt && !isDirty && <span className="text-[10px] text-green-500 ml-1 flex items-center gap-0.5"><Check className="w-3 h-3" /> saved</span>}
+      </div>
+      <div className={cn('rounded-[24px] soft-card p-4 transition-all', focused && 'ring-2 ring-purple-400/30')}>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value.slice(0, 500))}
+          onFocus={() => setFocused(true)}
+          onBlur={() => { setFocused(false); persist(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.target.blur(); } }}
+          placeholder={loading ? 'Loading…' : "What's the truth about today? Just one sentence."}
+          disabled={loading}
+          className="w-full bg-transparent text-sm placeholder-[var(--foreground-muted)] focus:outline-none resize-none"
+          rows={3} />
+        <div className="flex items-center justify-between text-[10px] text-muted mt-1">
+          <span className="italic">Honest beats elaborate. Two minutes max.</span>
+          <span className="tabular-nums">{text.length}/500</span>
+        </div>
       </div>
     </div>
   );

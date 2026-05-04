@@ -248,6 +248,7 @@ async function getActivityFeed(req, res, next) {
         taskTitle: c.task?.title || 'Task',
         taskColor: c.task?.color || null,
         proofUrl: c.proofUrl || null,
+        remark: c.notes || null,
         reactions: counts,
         myEmoji,
         comments: (c.comments || []).map(co => ({
@@ -297,7 +298,10 @@ async function getAnalytics(req, res, next) {
     const startDate = new Date(now); startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
     const weekStart = new Date(now); weekStart.setUTCDate(weekStart.getUTCDate() - 6);
 
-    const [allTasks, allCompletions, xpList] = await Promise.all([
+    // Calendar-month start (UTC) for "this month" shame counts
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    const [allTasks, allCompletions, xpList, shameEvents] = await Promise.all([
       prisma.task.findMany({ where: { userId: { in: memberIds }, groupId: req.params.id } }),
       prisma.taskCompletion.findMany({
         where: { userId: { in: memberIds }, task: { groupId: req.params.id }, date: { gte: startDate, lt: tomorrow } },
@@ -311,10 +315,21 @@ async function getAnalytics(req, res, next) {
         },
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, totalXp: true } })
+      prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, totalXp: true } }),
+      prisma.shameEvent.findMany({
+        where: { groupId: req.params.id, userId: { in: memberIds }, createdAt: { gte: monthStart } },
+        select: { userId: true, daysMissed: true, resolvedAt: true, createdAt: true }
+      })
     ]);
 
     const xpMap = Object.fromEntries(xpList.map(u => [u.id, u.totalXp]));
+    const shameByUser = {};
+    shameEvents.forEach(e => {
+      if (!shameByUser[e.userId]) shameByUser[e.userId] = { count: 0, totalDaysMissed: 0, currentlyOpen: false };
+      shameByUser[e.userId].count += 1;
+      shameByUser[e.userId].totalDaysMissed += (e.daysMissed || 2);
+      if (!e.resolvedAt) shameByUser[e.userId].currentlyOpen = true;
+    });
     const tasksByUser = {};
     allTasks.forEach(t => { if (!tasksByUser[t.userId]) tasksByUser[t.userId] = []; tasksByUser[t.userId].push(t); });
 
@@ -382,7 +397,8 @@ async function getAnalytics(req, res, next) {
         last7Days: history.slice(-7),
         showUpStreak: { current: showUpCurrent, longest: showUpLongest },
         topHabit,
-        totalCompletions: myCompletions.length
+        totalCompletions: myCompletions.length,
+        shameStats: shameByUser[m.userId] || { count: 0, totalDaysMissed: 0, currentlyOpen: false }
       };
     });
 
@@ -602,4 +618,248 @@ async function updateGroup(req, res, next) {
   }
 }
 
-module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole, getAnalytics, getActivityFeed };
+async function getShameWall(req, res, next) {
+  try {
+    const membership = await groupQ.findMembership(req.user.id, req.params.id);
+    if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
+
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    // Self-heal: any open event whose user has completed *something* in this group today
+    // gets auto-resolved before we read. Fixes any race where completeTask's fire-and-forget
+    // resolve missed (server restart, network hiccup, pre-existing event from before the
+    // resolve was wired in).
+    const todayUtc = new Date(now); todayUtc.setUTCHours(0, 0, 0, 0);
+    const tomorrowUtc = new Date(todayUtc); tomorrowUtc.setUTCDate(todayUtc.getUTCDate() + 1);
+    const openBefore = await prisma.shameEvent.findMany({
+      where: { groupId: req.params.id, resolvedAt: null },
+      select: { id: true, userId: true }
+    });
+    if (openBefore.length > 0) {
+      const userIdsWithCompletionsToday = await prisma.taskCompletion.findMany({
+        where: {
+          userId: { in: openBefore.map(e => e.userId) },
+          task: { groupId: req.params.id },
+          date: { gte: todayUtc, lt: tomorrowUtc }
+        },
+        select: { userId: true },
+        distinct: ['userId']
+      });
+      const cleared = new Set(userIdsWithCompletionsToday.map(c => c.userId));
+      const toResolve = openBefore.filter(e => cleared.has(e.userId)).map(e => e.id);
+      if (toResolve.length > 0) {
+        await prisma.shameEvent.updateMany({
+          where: { id: { in: toResolve } },
+          data: { resolvedAt: now }
+        });
+      }
+    }
+
+    const [openEvents, monthEvents, members, monthCompletions] = await Promise.all([
+      prisma.shameEvent.findMany({
+        where: { groupId: req.params.id, resolvedAt: null },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+          task: { select: { id: true, title: true, color: true } }
+        },
+        orderBy: { createdAt: 'asc' } // oldest open first → most-haunted up top
+      }),
+      prisma.shameEvent.findMany({
+        where: { groupId: req.params.id, createdAt: { gte: monthStart } },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      groupQ.findGroupMembers(req.params.id),
+      prisma.taskCompletion.count({
+        where: { task: { groupId: req.params.id }, date: { gte: monthStart } }
+      })
+    ]);
+
+    // Look up active habits for each ghost user, so we can surface what they're skipping
+    const ghostUserIds = openEvents.map(e => e.userId);
+    const ghostTasks = ghostUserIds.length > 0
+      ? await prisma.task.findMany({
+          where: { userId: { in: ghostUserIds }, groupId: req.params.id, isActive: true },
+          select: { id: true, title: true, color: true, userId: true }
+        })
+      : [];
+    const tasksByUser = {};
+    ghostTasks.forEach(t => {
+      if (!tasksByUser[t.userId]) tasksByUser[t.userId] = [];
+      tasksByUser[t.userId].push({ id: t.id, title: t.title, color: t.color });
+    });
+
+    const items = openEvents.map(e => {
+      const daysSinceOpen = Math.max(e.daysMissed || 2, Math.round((now - new Date(e.createdAt)) / (1000 * 60 * 60 * 24)) + (e.daysMissed || 2));
+      return {
+        id: e.id,
+        userId: e.userId,
+        userName: e.user?.name || 'Member',
+        userAvatar: e.user?.avatar || null,
+        taskId: e.taskId,
+        taskTitle: e.task?.title || null,
+        taskColor: e.task?.color || null,
+        daysMissed: daysSinceOpen,
+        since: e.createdAt,
+        habits: tasksByUser[e.userId] || []
+      };
+    });
+
+    // Recently cleared = resolved events this month, newest first, last 5
+    const recentlyCleared = monthEvents
+      .filter(e => e.resolvedAt)
+      .slice(0, 5)
+      .map(e => ({
+        id: e.id,
+        userId: e.userId,
+        userName: e.user?.name || 'Member',
+        userAvatar: e.user?.avatar || null,
+        daysMissed: e.daysMissed,
+        since: e.createdAt,
+        clearedAt: e.resolvedAt
+      }));
+
+    // Per-member monthly stats
+    const byUser = {};
+    monthEvents.forEach(e => {
+      if (!byUser[e.userId]) byUser[e.userId] = { count: 0, totalDays: 0, currentlyOpen: false };
+      byUser[e.userId].count += 1;
+      byUser[e.userId].totalDays += (e.daysMissed || 2);
+      if (!e.resolvedAt) byUser[e.userId].currentlyOpen = true;
+    });
+
+    const memberMap = Object.fromEntries(members.map(m => [m.userId, m.user]));
+    const repeatOffenders = Object.entries(byUser)
+      .map(([uid, s]) => ({
+        userId: uid,
+        name: memberMap[uid]?.name || 'Member',
+        avatar: memberMap[uid]?.avatar || null,
+        count: s.count,
+        totalDays: s.totalDays,
+        currentlyOpen: s.currentlyOpen
+      }))
+      .sort((a, b) => (b.count - a.count) || (b.totalDays - a.totalDays))
+      .slice(0, 5);
+
+    const shamedUserIds = new Set(Object.keys(byUser));
+    const cleanRecord = members
+      .filter(m => !shamedUserIds.has(m.userId))
+      .map(m => ({ userId: m.userId, name: m.user.name, avatar: m.user.avatar || null }));
+
+    const totalSilentDays = Object.values(byUser).reduce((s, x) => s + x.totalDays, 0);
+
+    const stats = {
+      openCount: openEvents.length,
+      totalEventsThisMonth: monthEvents.length,
+      totalSilentDaysThisMonth: totalSilentDays,
+      monthCompletions,
+      memberCount: members.length,
+      cleanCount: cleanRecord.length,
+      worstSilence: items.length > 0 ? Math.max(...items.map(i => i.daysMissed)) : 0,
+      repeatOffenders,
+      cleanRecord: cleanRecord.slice(0, 12),
+      recentlyCleared
+    };
+
+    res.json({ items, stats });
+  } catch (error) { next(error); }
+}
+
+async function getCompare(req, res, next) {
+  try {
+    const membership = await groupQ.findMembership(req.user.id, req.params.id);
+    if (!membership) return res.status(403).json({ error: 'Not a member of this group' });
+
+    // Resolve & validate inputs
+    const memberIdsParam = (req.query.members || '').split(',').filter(Boolean);
+    const fromKey = req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from) ? req.query.from : null;
+    const toKey = req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to) ? req.query.to : null;
+    if (!fromKey || !toKey) return res.status(400).json({ error: 'from and to (YYYY-MM-DD) are required' });
+
+    const [yF, mF, dF] = fromKey.split('-').map(Number);
+    const [yT, mT, dT] = toKey.split('-').map(Number);
+    const start = new Date(Date.UTC(yF, mF - 1, dF));
+    const end = new Date(Date.UTC(yT, mT - 1, dT));
+    const endExclusive = new Date(end); endExclusive.setUTCDate(end.getUTCDate() + 1);
+    if (start > end) return res.status(400).json({ error: 'from must be <= to' });
+
+    const allMembers = await groupQ.findGroupMembers(req.params.id);
+    const memberIds = memberIdsParam.length
+      ? allMembers.filter(m => memberIdsParam.includes(m.userId)).map(m => m.userId)
+      : allMembers.map(m => m.userId);
+    if (memberIds.length < 1) return res.status(400).json({ error: 'No valid members selected' });
+
+    const memberMap = Object.fromEntries(allMembers.map(m => [m.userId, m.user]));
+
+    const [tasks, completions] = await Promise.all([
+      prisma.task.findMany({
+        where: { userId: { in: memberIds }, groupId: req.params.id, isActive: true }
+      }),
+      prisma.taskCompletion.findMany({
+        where: { userId: { in: memberIds }, task: { groupId: req.params.id }, date: { gte: start, lt: endExclusive } },
+        include: { task: { select: { id: true, title: true, color: true, weightage: true, userId: true } } }
+      })
+    ]);
+
+    // Build a list of date keys for the range (inclusive)
+    const dayCount = Math.round((endExclusive - start) / (24 * 60 * 60 * 1000));
+    const dateKeys = [];
+    for (let i = 0; i < dayCount; i++) {
+      const d = new Date(start); d.setUTCDate(start.getUTCDate() + i);
+      dateKeys.push({ key: d.toISOString().split('T')[0], date: d });
+    }
+
+    // For each member, daily score arrays + per-habit summary
+    const result = memberIds.map(uid => {
+      const userTasks = tasks.filter(t => t.userId === uid);
+      const userCompletions = completions.filter(c => c.userId === uid);
+      const days = dateKeys.map(({ key, date }) => {
+        const apps = getApplicableTasks(userTasks, date);
+        const totalWeight = apps.reduce((s, t) => s + t.weightage, 0);
+        const dayComps = userCompletions.filter(c => c.date.toISOString().split('T')[0] === key);
+        const completedWeight = dayComps.reduce((s, c) => s + (c.task?.weightage || 0), 0);
+        return {
+          date: key,
+          applicable: apps.length, completed: dayComps.length,
+          score: totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0
+        };
+      });
+
+      // Per-habit
+      const habitMap = {};
+      userTasks.forEach(t => { habitMap[t.id] = { id: t.id, title: t.title, color: t.color, applicable: 0, completed: 0 }; });
+      dateKeys.forEach(({ date }) => {
+        getApplicableTasks(userTasks, date).forEach(t => { if (habitMap[t.id]) habitMap[t.id].applicable++; });
+      });
+      userCompletions.forEach(c => { if (habitMap[c.taskId]) habitMap[c.taskId].completed++; });
+      const habits = Object.values(habitMap).map(h => ({
+        ...h,
+        rate: h.applicable > 0 ? Math.round((h.completed / h.applicable) * 100) : 0
+      }));
+
+      // Total stats
+      const scoredDays = days.filter(d => d.applicable > 0);
+      const avg = scoredDays.length ? Math.round(scoredDays.reduce((s, d) => s + d.score, 0) / scoredDays.length) : 0;
+      const totalCompletions = userCompletions.length;
+      const bestDay = scoredDays.slice().sort((a, b) => b.score - a.score)[0] || null;
+
+      return {
+        userId: uid,
+        name: memberMap[uid]?.name || 'Member',
+        avatar: memberMap[uid]?.avatar || null,
+        days,
+        habits,
+        avg,
+        totalCompletions,
+        bestDay: bestDay ? { date: bestDay.date, score: bestDay.score } : null
+      };
+    });
+
+    res.json({ from: fromKey, to: toKey, members: result });
+  } catch (error) { next(error); }
+}
+
+module.exports = { listGroups, createGroup, getGroup, joinGroup, inviteToGroup, cancelInvite, getMemberTasks, getLeaderboard, removeMember, leaveGroup, updateGroup, updateMemberRole, getAnalytics, getActivityFeed, getShameWall, getCompare };
